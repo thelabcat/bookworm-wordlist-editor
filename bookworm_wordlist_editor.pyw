@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-#Bookworm Deluxe wordlist editor v1.0
+#Bookworm Deluxe wordlist editor
 #S.D.G.
 
 from tkinter import *
@@ -13,6 +13,7 @@ from wordfreq import zipf_frequency
 import shutil
 import getpass
 import platform
+import sys
 
 NO_WORD="(no word selected)"
 DEFFIELD_SIZE=(15, 5)
@@ -49,7 +50,7 @@ class Editor(Tk):
         self.title("Bookworm Wordlist Editor")
         self.build()
         self.game_path=GAME_PATH_DEFAULT
-        self.load_files(select=False, force=True)
+        self.load_files(select=False, do_or_die=True)
         self.mainloop()
         
     def build(self):
@@ -297,26 +298,28 @@ class Editor(Tk):
 
     def is_game_path_valid(self, path):
         """Check if the wordlist and popdefs files exists in the game path"""
-        dircheck=glob.glob(path+"*")
-        return (path+WORDLIST_FILE in dircheck and path+POPDEFS_FILE in dircheck)
+        dircheck = glob.glob(path + "*")
+        return (path+WORDLIST_FILE in dircheck and path + POPDEFS_FILE in dircheck)
 
-    def load_files(self, *args, select=True, force=False):
+    def load_files(self, *args, select = True, do_or_die = False):
         """Load the wordlist and the popdefs"""
-        select=select or not self.is_game_path_valid(self.game_path) #Ask the user for a directory if the current one is invalid, even if the select argument is false
+        select = select or not self.is_game_path_valid(self.game_path) #Ask the user for a directory if the current one is invalid, even if the select argument is false
         while select:
             while True: #Possible to force the user to select something and not cancel
-                response=filedialog.askdirectory(title="Game directory", initialdir=self.game_path)
+                response = filedialog.askdirectory(title = "Game directory", initialdir = self.game_path)
                 if response:
                     break #We got a response, so break the loop
-                elif not force:
+                elif not do_or_die:
                     return #We did not get a response, but we aren't supposed to force. Assumes the game is not installed to root directory.
-                mb.showerror("Cannot cancel", "Please select the game directory")
+                if mb.askyesno("Cannot cancel", "The program needs a valid directory to continue. Exit the program?"): #Do or die
+                    self.destroy()
+                    sys.exit()
                 
-            select=not self.is_game_path_valid(response+os.sep) #If the game path is valid, we are no longer selecting
+            select = not self.is_game_path_valid(response + os.sep) #If the game path is valid, we are no longer selecting
             if select:
                 mb.showerror("Invalid directory", "Could not find the word list and pop definitions here.")
             else:
-                self.game_path=response+os.sep #We got a new valid directory
+                self.game_path = response + os.sep #We got a new valid directory
         
         #First, the wordlist
         f=open(self.game_path+WORDLIST_FILE)
