@@ -239,10 +239,8 @@ class Editor(Tk):
     def update_query(self, *args):
         """Update the list of search results"""
         self.search.set(self.search.get().lower())
-        query=[]
-        for word in self.words:
-            if self.search.get() in word:
-                query.append(word)
+        query = [word for word in self.words if self.search.get() in word] #Comprehensively filter the wordlist to only matching words
+        query.sort(key = lambda x: x.index(self.search.get())) #Sort search results by how close the search query is to the beginning
         self.query_list.set(query)
         self.selection_updated()
 
