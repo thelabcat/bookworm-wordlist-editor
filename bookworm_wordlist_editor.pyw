@@ -19,6 +19,7 @@ import time #For debug
 NO_WORD="(no word selected)"
 DEFFIELD_SIZE=(15, 5)
 
+ALPHABET = "abcdefghijklmnopqrstuvwxyz"
 LANG="en" #Language to use when checking word rarity
 NUMERIC="1234567890"
 WORD_TYPES={"Noun":"n.", "Verb":"v.", "Adjective":"adj.", "Adverb":"adv.", "Interjection":"int.", "Preposition":"prep.", "Conjugation":"conj."}
@@ -73,6 +74,8 @@ class Editor(Tk):
         #Edit menu
         self.edit_menu = Menu(self.menubar, tearoff = 1)
         self.edit_menu.add_command(label = "Delete orphaned definitions", command = self.del_orphaned_defs)
+        self.edit_menu.add_command(label = "Add several words", command = self.mass_add_words)
+        self.edit_menu.add_command(label = "Delete several words", command = self.mass_delete_words)
         self.menubar.add_cascade(label="Edit", menu=self.edit_menu)
 
         #Frame for list
@@ -144,6 +147,70 @@ class Editor(Tk):
         self.del_bttn=Button(self.worddef_frame, text="Delete word", command=self.del_word)
         self.del_bttn.grid(row=4, columnspan=2, sticky=N+S+E+W)
 
+    def mass_add_words(self):
+        """Add a whole file's worth of words"""
+        f = filedialog.askopenfile(title = "Select human-readable list of words", filetypes = [("Plain text", "*.txt")])
+        if not f: #The user cancelled
+            return
+        text = f.read().strip()
+        f.close()
+
+        alpha_text = "".join([c for c in text if c.lower() in ALPHABET or c.isspace()]) #Filter text to alphabet and whitespace
+        if not alpha_text:
+            mb.showerror("Invalid file", "File did not contain any alphabetic text.")
+            return
+
+        add_words = [word.strip().lower() for word in alpha_text.split()] #Get all words, delimited by whitespace, in lowercase
+        if not add_words:
+            mb.showerror("Invalid file", "Did not find any words in file.")
+            return
+
+        new_words = [word for word in add_words if word not in self.words] #Filter words to ones we don't have yet
+        already_have = len(add_words) - len(new_words)
+        if not new_words:
+            mb.showinfo("Already have all words", "All %i words are already in the word list." % len(add_words))
+            return
+
+        if already_have:
+            mb.showinfo("Already have some words", "%i of these words are already in the wordlist." % already_have)
+
+        self.words += new_words
+        self.words.sort()
+        if mb.askyesno("Words added", "Added %i new words to the word list. Save changes to disk now?" % len(new_words)):
+            self.save_files()
+
+    def mass_delete_words(self):
+        """Delete a whole file's worth of words"""
+        f = filedialog.askopenfile(title = "Select human-readable list of words", filetypes = [("Plain text", "*.txt")])
+        if not f: #The user cancelled
+            return
+        text = f.read().strip()
+        f.close()
+
+        alpha_text = "".join([c for c in text if c.lower() in ALPHABET or c.isspace()]) #Filter text to alphabet and whitespace
+        if not alpha_text:
+            mb.showerror("Invalid file", "File did not contain any alphabetic text.")
+            return
+
+        del_words = [word.strip().lower() for word in alpha_text.split()] #Get all words, delimited by whitespace, in lowercase
+        if not del_words:
+            mb.showerror("Invalid file", "Did not find any words in file.")
+            return
+
+        old_words = [word for word in del_words if word in self.words] #Filter words to ones we do have
+        dont_have = len(del_words) - len(old_words)
+        if not old_words:
+            mb.showinfo("Don't have any of the words", "None of the %i words were in the word list." % len(del_words))
+            return
+
+        if dont_have:
+            mb.showinfo("Don't have some words", "%i of these words are not in the wordlist." % dont_have)
+
+        for word in old_words:
+            self.words.remove(word)
+        if mb.askyesno("Words deleted", "Removed %i words from the word list. Save changes to disk now?" % len(old_words)):
+            self.save_files()
+
     def unpack_wordlist(self, wordlist):
         """Given a wordlist as text, unpack into a list of words"""
         words=[]
@@ -185,25 +252,6 @@ class Editor(Tk):
             oldcopy=copy
             
         return "\n".join(listings).strip()
-
-    def build_auto_def(self, word):
-        """Construct a definition line given a word"""
-        def_raw=dic.meaning(word, disable_errors=True)
-        if not def_raw:
-            return word.upper()+"\t"+"<NO DEFINITION FOUND>"
-        
-        for typ in tuple(def_raw.keys()):
-            for meaning in def_raw[typ][:]:
-                if meaning[0]=="(": #Remove special context defintions
-                    def_raw[typ].remove(meaning)
-            if not def_raw[typ]: #Remove emptied word type definitions
-                del def_raw[typ]
-                
-        if not def_raw:
-            return word.upper()+"\t"+"<NO APPROPRIATE DEFINITION FOUND>"
-        
-        return word.upper()+"\t"+"; ".join(["("+WORD_TYPES[key]+") "+def_raw[key][0].capitalize() for key in def_raw.keys()])
-
 
     def selection_updated(self, *args):
         """A new word has been selected, update everything"""
