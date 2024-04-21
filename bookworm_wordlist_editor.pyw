@@ -395,7 +395,8 @@ class Editor(Tk):
             return
         for o in orphaned:
             del self.defs[o]
-        mb.showinfo("Orphaned definitions deleted", "Found and deleted %i orphaned definitions." % len(orphaned))
+        if mb.askyesno("Orphaned definitions deleted", "Found and deleted %i orphaned definitions. Save now?" % len(orphaned)):
+            self.save_files()
 
     def save_files(self, *args, backup=False):
         """Save the worldist and popdefs"""
