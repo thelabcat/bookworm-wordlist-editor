@@ -14,6 +14,7 @@ import shutil
 import getpass
 import platform
 import sys
+import time #For debug
 
 NO_WORD="(no word selected)"
 DEFFIELD_SIZE=(15, 5)
@@ -68,6 +69,11 @@ class Editor(Tk):
         self.file_menu.add_command(label="Reload", command=lambda: self.load_files(select=False))
         self.file_menu.add_command(label="Save", command=self.save_files)
         self.menubar.add_cascade(label="File", menu=self.file_menu)
+
+        #Edit menu
+        self.edit_menu = Menu(self.menubar, tearoff = 1)
+        self.edit_menu.add_command(label = "Delete orphaned definitions", command = self.del_orphaned_defs)
+        self.menubar.add_cascade(label="Edit", menu=self.edit_menu)
 
         #Frame for list
         self.list_frame=Frame(self)
@@ -328,19 +334,20 @@ class Editor(Tk):
 
         #Then, the popdefs
         f=open(self.game_path+POPDEFS_FILE, encoding=POPDEFS_ENC)
-        data=f.read().splitlines()
+        data=f.read().strip().splitlines()
         f.close()
 
-        not_in_wordlist=[]
-        self.defs={}
-        for l in data:
-            d=l.split("\t")
-            if not not_in_wordlist and not d[0].lower() in self.words:
-                not_in_wordlist.append(d[0].lower())
-            self.defs[d[0].lower()]=d[1]
-        if not_in_wordlist and mb.askyesno("Orphaned popdefs", "Some pop definitions do not have corresponding words in the wordlist. Delete them?"):
-            for word in not_in_wordlist:
-                del self.defs[word]
+        self.defs = {l.split("\t")[0].lower() : l.split("\t")[1] for l in data}
+
+    def del_orphaned_defs(self):
+        """Find and delete any orphaned definitions"""
+        orphaned = [word for word in self.defs.keys() if word not in self.words]
+        if not orphaned:
+            mb.showinfo("No orphaned definitions", "All recorded definitions have a word they are paired with.")
+            return
+        for o in orphaned:
+            del self.defs[o]
+        mb.showinfo("Orphaned definitions deleted", "Found and deleted %i orphaned definitions." % len(orphaned))
 
     def save_files(self, *args, backup=False):
         """Save the worldist and popdefs"""
