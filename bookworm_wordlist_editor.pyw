@@ -16,6 +16,9 @@ import platform
 import sys
 import time #For debug
 
+OP_PATH = __file__[:__file__.rfind(os.sep)] #The path of the script file
+ICON_PATH = OP_PATH + os.sep + "bookworm_wordlist_editor.png"
+
 NO_WORD="(no word selected)"
 DEFFIELD_SIZE=(15, 5)
 
@@ -57,6 +60,8 @@ class Editor(Tk):
         
     def build(self):
         """Construct GUI"""
+
+        self.iconphoto(True, PhotoImage(file = ICON_PATH)) #Set the window icon
 
         self.bind("<Control-s>", self.save_files)
 
