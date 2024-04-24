@@ -16,18 +16,20 @@ import platform
 import sys
 import time #For debug
 
-OP_PATH = __file__[:__file__.rfind(os.sep)] #The path of the script file
-ICON_PATH = OP_PATH + os.sep + "bookworm_wordlist_editor.png"
-
-NO_WORD="(no word selected)"
-DEFFIELD_SIZE=(15, 5)
-
+#Language and charset information
 ALPHABET = "abcdefghijklmnopqrstuvwxyz"
-LANG="en" #Language to use when checking word rarity
 NUMERIC="1234567890"
 WORD_TYPES={"Noun":"n.", "Verb":"v.", "Adjective":"adj.", "Adverb":"adv.", "Interjection":"int.", "Preposition":"prep.", "Conjugation":"conj."}
-RARE_THRESH=3.5 #Words with usage less than this get definitions
-RARE_COLS=("#000", "#c00") #Index with int(<is rare?>)
+LANG="en" #Language to use when checking word rarity
+RARE_THRESH=3.5 #Words with usage less than this should probably get definitions
+
+#BookWorm Deluxe's internal word length delimiters'
+WORD_LENGTH_MIN = 3
+WORD_LENGTH_MAX = 12
+
+#File paths and related info
+OP_PATH = __file__[:__file__.rfind(os.sep)] #The path of the script file
+ICON_PATH = OP_PATH + os.sep + "bookworm_wordlist_editor.png"
 USER=getpass.getuser()
 GAME_PATH_DEFAULT={"Linux":"/home/%s/.wine/drive_c/Program Files/PopCap Games/BookWorm Deluxe/" % USER,
                    "Darwin":"/Users/%s/.wine/drive_c/Program Files/PopCap Games/BookWorm Deluxe/" % USER,
@@ -37,7 +39,13 @@ WORDLIST_FILE="wordlist.txt"
 POPDEFS_FILE="popdefs.txt"
 POPDEFS_ENC="iso 8859-15" #Encoding to use when writing the popdefs.txt file
 BACKUP_SUFFIX=".bak"
+
+#Miscellanious GUI settings
+WINDOW_TITLE = "BookWorm Deluxe Wordlist Editor"
+RARE_COLS=("#000", "#c00") #Index with int(<is rare?>)
 WORDFREQ_DISP_PREFIX="Usage: "
+NO_WORD="(no word selected)"
+DEFFIELD_SIZE=(15, 5)
 
 """
 The rules for unpacking the dictionary are simple:
@@ -52,7 +60,8 @@ class Editor(Tk):
     def __init__(self):
         """Main editor window"""
         super(type(self), self).__init__()
-        self.title("BookWorm Deluxe Wordlist Editor")
+        self.title(WINDOW_TITLE)
+        self.iconphoto(True, PhotoImage(file = ICON_PATH)) #Set the window icon
         self.build()
         self.game_path=GAME_PATH_DEFAULT
         self.load_files(select=False, do_or_die=True)
@@ -60,8 +69,6 @@ class Editor(Tk):
         
     def build(self):
         """Construct GUI"""
-
-        self.iconphoto(True, PhotoImage(file = ICON_PATH)) #Set the window icon
 
         self.bind("<Control-s>", self.save_files)
 
