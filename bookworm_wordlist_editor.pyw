@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-#Bookworm Deluxe wordlist editor
+#BookWorm Deluxe wordlist editor
 #S.D.G.
 
 from tkinter import *
@@ -52,7 +52,7 @@ class Editor(Tk):
     def __init__(self):
         """Main editor window"""
         super(type(self), self).__init__()
-        self.title("Bookworm Wordlist Editor")
+        self.title("BookWorm Deluxe Wordlist Editor")
         self.build()
         self.game_path=GAME_PATH_DEFAULT
         self.load_files(select=False, do_or_die=True)
