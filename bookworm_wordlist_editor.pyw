@@ -86,6 +86,7 @@ class Editor(Tk):
         #Edit menu
         self.edit_menu = Menu(self.menubar, tearoff = 1)
         self.edit_menu.add_command(label = "Delete orphaned definitions", command = self.del_orphaned_defs)
+        self.edit_menu.add_command(label = "Delete words of invalid length", command = self.del_invalid_len_words)
         self.edit_menu.add_command(label = "Add several words", command = self.mass_add_words)
         self.edit_menu.add_command(label = "Delete several words", command = self.mass_delete_words)
         self.menubar.add_cascade(label="Edit", menu=self.edit_menu)
@@ -184,11 +185,20 @@ class Editor(Tk):
             return
 
         if already_have:
-            mb.showinfo("Already have some words", "%i of these words are already in the wordlist." % already_have)
+            mb.showinfo("Already have some words", "%i words are already in the word list." % already_have)
 
-        self.words += new_words
+        new_lenvalid_words = [word for word in new_words if self.is_len_valid(word)]
+        len_invalid = len(new_words) - len(new_lenvalid_words)
+        if not new_lenvalid_words:
+            mb.showerror("Invalid word lengths", "All %i new words were rejected because they were not between %i and %i letters long." % (len(new_words), WORD_LENGTH_MIN, WORD_LENGTH_MAX))
+            return
+
+        if len_invalid:
+            mb.showinfo("Some invalid word lengths", "%i words were rejected because they were not between %i and %i letters long." % (len_invalid, WORD_LENGTH_MIN, WORD_LENGTH_MAX))
+
+        self.words += new_lenvalid_words
         self.words.sort()
-        if mb.askyesno("Words added", "Added %i new words to the word list. Save changes to disk now?" % len(new_words)):
+        if mb.askyesno("Words added", "Added %i new words to the word list. Save changes to disk now?" % len(new_lenvalid_words)):
             self.save_files()
 
     def mass_delete_words(self):
@@ -221,6 +231,26 @@ class Editor(Tk):
         for word in old_words:
             self.words.remove(word)
         if mb.askyesno("Words deleted", "Removed %i words from the word list. Save changes to disk now?" % len(old_words)):
+            self.save_files()
+
+    def is_len_valid(self, word, notify = False):
+        """Check if a word's length is valid. Notify triggers a GUI popup if length is invalid"""
+        if notify and not WORD_LENGTH_MIN <= len(word) <= WORD_LENGTH_MAX:
+            mb.showerror("Word is too " + ("short", "long")[int(len(word) > WORD_LENGTH_MAX)], "Word must be between %i and %i letters long." % (WORD_LENGTH_MIN, WORD_LENGTH_MAX))
+
+        return WORD_LENGTH_MIN <= len(word) <= WORD_LENGTH_MAX
+
+    def del_invalid_len_words(self):
+        """Remove all words of invalid length from the wordlist"""
+        invalid = [word for word in self.words if not self.is_len_valid(word)]
+        if not invalid:
+            mb.showinfo("No invalid length words", "All words are already between %i and %i letters long." % (WORD_LENGTH_MIN, WORD_LENGTH_MAX))
+            return
+
+        for word in invalid:
+            self.words.remove(word)
+
+        if mb.askyesno("Invalid length words deleted", "Found and deleted %i words of invalid length from the word list. Save changes to disk now?" % len(invalid)):
             self.save_files()
 
     def unpack_wordlist(self, wordlist):
@@ -292,13 +322,28 @@ class Editor(Tk):
     def new_word(self, *args):
         """Create a new word entry"""
         new=dialog.askstring("New word", "Enter the new word to add:")
-        if not new:
+
+        #Allow the user to cancel, and also ensure the word is of allowed length
+        if not new or not self.is_len_valid(new, notify = True):
             return
         new=new.lower()
+
+        #Ensure that the word is only letters
+        for char in new:
+            if char not in ALPHABET:
+                mb.showerror("Invalid character found", "Word must be only letters (no numbers or symbols).")
+                return
+
+        #If the word really is new, add it
         if new not in self.words:
             self.words.append(new)
             self.words.sort()
             self.update_query()
+        else:
+            mb.showinfo("Already have word", "The word %s is already in the word list." % new)
+
+        #Highlight the new word even if it wasn't actually new, so long as it is in our current search results
+        #TODO this isn't working. See issue #4
         if new in self.query_list.get():
             self.query_box.activate(self.query_list.get().index(new)) #If the new word is now in the query, select it
 
