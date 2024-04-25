@@ -1,4 +1,5 @@
 # BookWorm Deluxe wordlist (and popdefs) editor
+![Screenshot](https://imgur.com/a/VgFslkL "The main app window")
 
 This program edits the wordlist and popup definitions for the game [BookWorm Deluxe by PopCap Games](https://oldgamesdownload.com/bookworm-deluxe/) released in 2006. I created this program after augmenting the wordlist more manually using [this free list of English words by dwyl](https://github.com/dwyl/english-words), but then discovering that it contained some errors, along with real words that I felt deserved a popdef.
 
