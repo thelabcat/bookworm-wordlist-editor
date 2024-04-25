@@ -370,8 +370,11 @@ class Editor(Tk):
         if self.get_selected_word()==NO_WORD:
             self.usage_display.config(text="")
             return
-        usage=zipf_frequency(self.get_selected_word(), LANG)
-        self.usage_display.config(text=WORDFREQ_DISP_PREFIX+str(usage), fg=RARE_COLS[int(usage<RARE_THRESH)])
+        try:
+            usage=zipf_frequency(self.get_selected_word(), LANG)
+            self.usage_display.config(text=WORDFREQ_DISP_PREFIX+str(usage), fg=RARE_COLS[int(usage<RARE_THRESH)])
+        except LookupError:
+            print("Usage lookup faliure. See issue #5.")
         self.load_definition()
 
     def load_definition(self):
