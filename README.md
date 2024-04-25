@@ -1,5 +1,4 @@
 # BookWorm Deluxe wordlist (and popdefs) editor
-![Screenshot](https://imgur.com/a/VgFslkL "The main app window")
 
 ![Screenshot](https://i.imgur.com/jr7QtS5_d.webp?maxwidth=760&fidelity=grand "The main app window")
 
