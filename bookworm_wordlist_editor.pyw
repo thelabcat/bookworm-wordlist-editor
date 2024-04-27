@@ -48,6 +48,9 @@ class Editor(Tk):
         self.words = []
         self.defs = {}
 
+        #Whatever word is selected
+        self.selected_word = NO_WORD
+
         self.thread = None #Any thread the GUI might spawn
 
         self.busy_status = False #Is the GUI currently busy (all widgets disabled)?
@@ -265,17 +268,17 @@ class Editor(Tk):
         def_entry = self.def_field.get("0.0", END).strip() #Get the current entry
 
         #There is no selected word
-        if self.get_selected_word() == NO_WORD:
+        if self.selected_word == NO_WORD:
             new_state = DISABLED
 
         #We have an old definition for this word
-        elif self.get_selected_word() in self.defs.keys():
+        elif self.selected_word in self.defs.keys():
             #The user deleted the old definition
             if not def_entry:
                 new_state = NORMAL
 
             #The old definition is the same as the new one
-            elif self.defs[self.get_selected_word()] == def_entry:
+            elif self.defs[self.selected_word] == def_entry:
                 new_state = DISABLED
 
             #There is a new definition
@@ -362,17 +365,20 @@ class Editor(Tk):
         """A new word has been selected, update everything"""
         #*args is there to receive unnecessary event data as this is a callback method
 
-        self.word_display.config(text = self.get_selected_word()) #Display the current word
+        #Update what word is selected
+        self.selected_word = self.get_selected_word()
+
+        self.word_display.config(text = self.selected_word) #Display the current word
         self.load_definition() #Load and display the current definition
 
         #If no word is selected, clear the usage statistic display
-        if self.get_selected_word() == NO_WORD:
+        if self.selected_word == NO_WORD:
             self.usage_display.config(text = "")
             return
 
         #Otherwise, try to load and display usage statistics
         try:
-            usage = bw.get_word_usage(self.get_selected_word())
+            usage = bw.get_word_usage(self.selected_word)
             self.usage_display.config(text = WORDFREQ_DISP_PREFIX + str(usage), fg = RARE_COLS[int(usage < bw.RARE_THRESH)])
         except LookupError:
             print("Usage lookup faliure. See issue #5.")
@@ -409,8 +415,8 @@ class Editor(Tk):
         self.def_field.delete(0.0, END)
 
         #If we have a definition for this word, display it
-        if self.get_selected_word() != NO_WORD and self.get_selected_word() in self.defs.keys():
-            self.def_field.insert(0.0, self.defs[self.get_selected_word()])
+        if self.selected_word != NO_WORD and self.selected_word in self.defs.keys():
+            self.def_field.insert(0.0, self.defs[self.selected_word])
 
         #Disable definition reset and save buttons now that a definition was (re)loaded
         self.regulate_def_buttons()
@@ -421,11 +427,11 @@ class Editor(Tk):
 
         #We have a definition to save
         if def_entry:
-            self.defs[self.get_selected_word()] = def_entry
+            self.defs[self.selected_word] = def_entry
 
         #We had a definition, and it has been deleted
-        elif self.get_selected_word() in self.defs.keys():
-            del self.defs[self.get_selected_word()]
+        elif self.selected_word in self.defs.keys():
+            del self.defs[self.selected_word]
 
         #There are now unsaved changes
         self.unsaved_changes = True
@@ -597,15 +603,15 @@ class Editor(Tk):
     def del_word(self, *args):
         """Delete the currently selected word"""
         #No word is selected, so nothing to delete
-        if self.get_selected_word() == NO_WORD:
+        if self.selected_word == NO_WORD:
             return
 
         #Remove the word from our words list
-        self.words.remove(self.get_selected_word())
+        self.words.remove(self.selected_word)
 
         #If we have a definition saved for this word, delete it
-        if self.get_selected_word() in self.defs.keys():
-            del self.defs[self.get_selected_word()]
+        if self.selected_word in self.defs.keys():
+            del self.defs[self.selected_word]
 
         #Refresh the query list
         self.update_query()
@@ -662,7 +668,7 @@ class Editor(Tk):
 
     def auto_define(self):
         """Pull a definition from the web and show it"""
-        word = self.get_selected_word()
+        word = self.selected_word
         if word == NO_WORD:
             return
 
