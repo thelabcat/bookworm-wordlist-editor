@@ -26,7 +26,7 @@ To run from source, install Python 3.x, and then the dependencies, then use Pyth
 - The File menu provides the following operations:
     - Open (Ctrl + O): Open a different word list and popdefs file pair.
     - Reload: Reload the current word list and popdefs file pair, reversing all your changes.
-    - Save (Ctrl + S): Save your changes. You MUST do this before closing the program, or your changes will be lost.
+    - Save (Ctrl + S): Save your changes.
 - The Edit menu provides the following operations:
     - Delete orphaned definitions: Removes definitions from the popdefs that do not have a word in the wordlist.
     - Delete words of invalid length: Removes words that BookWorm Deluxe will not allow as moves because of their length.
