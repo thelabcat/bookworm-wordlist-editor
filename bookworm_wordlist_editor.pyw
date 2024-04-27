@@ -9,49 +9,15 @@ from tkinter import *
 from tkinter import messagebox as mb
 from tkinter import simpledialog as dialog
 from tkinter import filedialog
-import glob
 import os
 import shutil
-import getpass
-import platform
 import sys
 import threading
-from PyDictionary import PyDictionary as dic
-from wordfreq import zipf_frequency
-
-#Language and charset information
-ALPHABET = "abcdefghijklmnopqrstuvwxyz"
-NUMERIC = "1234567890"
-WORD_TYPES = { #Word types that PyDictionary may return, and their abbreviations
-    "Noun":"n.",
-    "Verb":"v.",
-    "Adjective":"adj.",
-    "Adverb":"adv.",
-    "Interjection":"int.",
-    "Preposition":"prep.",
-    "Conjugation":"conj."
-        }
-LANG = "en" #Language to use when checking word rarity
-RARE_THRESH = 3.5 #Words with usage less than this should probably get definitions
-
-#BookWorm Deluxe's internal word length delimiters'
-WORD_LENGTH_MIN = 3
-WORD_LENGTH_MAX = 12
+import bookworm_utils as bw
 
 #File paths and related info
 OP_PATH = __file__[:__file__.rfind(os.sep)] #The path of the script file
 ICON_PATH = OP_PATH + os.sep + "bookworm_wordlist_editor.png"
-USER=getpass.getuser()
-GAME_PATH_DEFAULT={"Linux" : f"/home/{USER}/.wine/drive_c/Program Files/PopCap Games/BookWorm Deluxe/",
-                   "Darwin" : f"/Users/{USER}/.wine/drive_c/Program Files/PopCap Games/BookWorm Deluxe/",
-                   "Windows" : "C:\\Program Files\\PopCap Games\\BookWorm Deluxe\\"
-                   }[platform.system()] #Get the default game path based on the OS
-WORDLIST_FILE = "wordlist.txt"
-POPDEFS_FILE = "popdefs.txt"
-
-#Encoding to use when opening the wordlist and popdefs files
-WORDLIST_ENC = "utf-8"
-POPDEFS_ENC = "iso 8859-15"
 
 BACKUP_SUFFIX = ".bak" #Suffix for backup files
 
@@ -93,7 +59,7 @@ class Editor(Tk):
         self.build()
 
         #Load files
-        self.game_path = GAME_PATH_DEFAULT
+        self.game_path = bw.GAME_PATH_DEFAULT
         self.load_files(select = False, do_or_die = True)
 
         #Start the GUI loop
@@ -294,7 +260,7 @@ class Editor(Tk):
             text = f.read().strip()
 
         #filter file to only letters and spaces
-        alpha_text = "".join([c for c in text if c.lower() in ALPHABET or c.isspace()])
+        alpha_text = "".join([c for c in text if c.lower() in bw.ALPHABET or c.isspace()])
 
         #There was no text besides non-alpha symbols
         if not alpha_text:
@@ -328,12 +294,12 @@ class Editor(Tk):
 
         #There were no words of valid length
         if not new_lenvalid_words:
-            mb.showerror("Invalid word lengths", f"All {len(new_words)} new words were rejected because they were not between {WORD_LENGTH_MIN} and {WORD_LENGTH_MAX} letters long.")
+            mb.showerror("Invalid word lengths", f"All {len(new_words)} new words were rejected because they were not between {bw.WORD_LENGTH_MIN} and {bw.WORD_LENGTH_MAX} letters long.")
             return
 
         #There were some words of invalid length
         if len_invalid:
-            mb.showinfo("Some invalid word lengths", f"{len_invalid} words were rejected because they were not between {WORD_LENGTH_MIN} and {WORD_LENGTH_MAX} letters long.")
+            mb.showinfo("Some invalid word lengths", f"{len_invalid} words were rejected because they were not between {bw.WORD_LENGTH_MIN} and {bw.WORD_LENGTH_MAX} letters long.")
 
         #Add the new words
         self.words += new_lenvalid_words
@@ -360,7 +326,7 @@ class Editor(Tk):
         text = f.read().strip()
         f.close()
 
-        alpha_text = "".join([c for c in text if c.lower() in ALPHABET or c.isspace()]) #Filter text to alphabet and whitespace
+        alpha_text = "".join([c for c in text if c.lower() in bw.ALPHABET or c.isspace()]) #Filter text to alphabet and whitespace
         if not alpha_text:
             mb.showerror("Invalid file", "File did not contain any alphabetic text.")
             return
@@ -393,11 +359,11 @@ class Editor(Tk):
 
     def is_len_valid(self, word, notify = False):
         """Check if a word's length is valid. Notify triggers a GUI popup if length is invalid"""
-        if notify and not WORD_LENGTH_MIN <= len(word) <= WORD_LENGTH_MAX:
+        if notify and not bw.WORD_LENGTH_MIN <= len(word) <= bw.WORD_LENGTH_MAX:
             #Dialog auto-selects the word "short" or "long" based on wether the invalid length was a too long case or not
-            mb.showerror("Word is too " + ("short", "long")[int(len(word) > WORD_LENGTH_MAX)], f"Word must be between {WORD_LENGTH_MIN} and {WORD_LENGTH_MAX} letters long.")
+            mb.showerror("Word is too " + ("short", "long")[int(len(word) > bw.WORD_LENGTH_MAX)], f"Word must be between {bw.WORD_LENGTH_MIN} and {bw.WORD_LENGTH_MAX} letters long.")
 
-        return WORD_LENGTH_MIN <= len(word) <= WORD_LENGTH_MAX
+        return bw.WORD_LENGTH_MIN <= len(word) <= bw.WORD_LENGTH_MAX
 
     def del_invalid_len_words(self):
         """Remove all words of invalid length from the wordlist (threaded)"""
@@ -407,7 +373,7 @@ class Editor(Tk):
         """Remove all words of invalid length from the wordlist"""
         invalid = [word for word in self.words if not self.is_len_valid(word)]
         if not invalid:
-            mb.showinfo("No invalid length words", "All words are already between {WORD_LENGTH_MIN} and {WORD_LENGTH_MAX} letters long.")
+            mb.showinfo("No invalid length words", "All words are already between {bw.WORD_LENGTH_MIN} and {bw.WORD_LENGTH_MAX} letters long.")
             return
 
         for word in invalid:
@@ -421,61 +387,6 @@ class Editor(Tk):
 
         if mb.askyesno("Invalid length words deleted", f"Found and deleted {len(invalid)} words of invalid length from the word list. Save changes to disk now?"):
             self.save_files()
-
-    def unpack_wordlist(self, wordlist):
-        """Given a wordlist as text, unpack into a list of words"""
-        words = []
-        copy = 0 #Number of characters to copy from previous word
-        for listing in wordlist.splitlines():
-            #Skip any blank listings
-            if not listing:
-                continue
-
-            #Parse any numbers at the beginning of the listing as the copy count
-            for i, char in enumerate(listing):
-                if char not in NUMERIC:
-                    break #i is now the index of the first letter in the listing
-
-            copyread = listing[:i] #set copyread to a string of any numbers at the beginning of the listing
-
-            if copyread: #If there a new copy count, don't reuse the last one
-                copy = int(copyread)
-
-            if words: #Copy from the last word, and add the letters from the listing
-                words.append(words[-1][:copy] + listing[i:])
-
-            elif not copy: #Do not copy from the last word, but trim off a zero copy count
-                words.append(listing[i:])
-
-            else:
-                raise ValueError("Copy count is {copy} at the first word but there are no words yet.")
-
-        return words
-
-    def pack_wordlist(self, words):
-        """Given a list of words, pack into a wordlist as text"""
-        listings = []
-        oldcopy = 0 #The previous number of letters copied from the word(s) before the current word
-        for i, new_word in enumerate(words):
-            if i == 0: #The first word cannot possibly copy anything, and should be listed whole
-                listings.append(new_word)
-                old_word = new_word
-                continue
-
-            #Compare the new word with the old one, one letter at a time,
-            #only going to the end of the shortest of the two words
-            for copy, letters in enumerate(zip(old_word, new_word)):
-                if letters[0] != letters[1]: #Compare the two letters at the same position from each word
-                    #copy is now set to the index of the first letter the new word does not have in common with the old one
-                    break
-
-            #Only include the copy count in the listing if it is different from the old copy count
-            #Only include the differing letters of the new word
-            listings.append(str(copy) * (copy != oldcopy) + new_word[copy:])
-            oldcopy = copy
-            old_word = new_word
-
-        return "\n".join(listings).strip()
 
     def selection_updated(self, *args):
         """A new word has been selected, update everything"""
@@ -491,8 +402,8 @@ class Editor(Tk):
 
         #Otherwise, try to load and display usage statistics
         try:
-            usage = zipf_frequency(self.get_selected_word(), LANG)
-            self.usage_display.config(text = WORDFREQ_DISP_PREFIX + str(usage), fg = RARE_COLS[int(usage < RARE_THRESH)])
+            usage = bw.get_word_usage(self.get_selected_word())
+            self.usage_display.config(text = WORDFREQ_DISP_PREFIX + str(usage), fg = RARE_COLS[int(usage < bw.RARE_THRESH)])
         except LookupError:
             print("Usage lookup faliure. See issue #5.")
 
@@ -549,7 +460,7 @@ class Editor(Tk):
 
         #Ensure that the word is only letters
         for char in new:
-            if char not in ALPHABET:
+            if char not in bw.ALPHABET:
                 mb.showerror("Invalid character found", "Word must be only letters (no numbers or symbols).")
                 return
 
@@ -579,7 +490,7 @@ class Editor(Tk):
         #*args is there to receive unnecessary event data as this is a callback method
 
         #Do not allow any capitalization or non-letters in the search field
-        self.search.set("".join([char for char in self.search.get().lower() if char in ALPHABET]))
+        self.search.set("".join([char for char in self.search.get().lower() if char in bw.ALPHABET]))
 
         #Comprehensively filter the wordlist to only matching words
         query = [word for word in self.words if self.search.get() in word]
@@ -591,36 +502,13 @@ class Editor(Tk):
         self.query_list.set(query)
         self.selection_updated()
 
-    def build_auto_def(self, word):
-        """Construct a definition line using PyDictionary, given a word"""
-        #Try to get a definition
-        def_raw = dic.meaning(word, disable_errors = True)
-        if not def_raw:
-            print("No definition found for", word)
-            return None
-
-        for typ in tuple(def_raw.keys()): #For each word type listed...
-            for meaning in def_raw[typ][:]: #For each definition listed in that word type...
-                if meaning[0] == "(": #Remove special context defintions
-                    def_raw[typ].remove(meaning)
-            if not def_raw[typ]: #Remove emptied word type definition lists
-                del def_raw[typ]
-
-        #If all definitions were for special context, report faliure
-        if not def_raw:
-            print("No appropriate definition found for", word)
-            return None
-
-        #Format the first PyDictionary definition for each word type as a BookWorm Deluxe definition string
-        return "; ".join(["(" + WORD_TYPES[typ] + ") " + defs[0].capitalize() for typ, defs in def_raw.items()])
-
     def auto_define(self):
         """Pull a definition from the web and show it"""
         word = self.get_selected_word()
         if word == NO_WORD:
             return
 
-        definition = self.build_auto_def(word)
+        definition = bw.build_auto_def(word)
         if not definition:
             mb.showerror("Could not autodefine", f"No useful definition returned from PyDictionary for {word}")
             return
@@ -656,11 +544,6 @@ class Editor(Tk):
         #There are now unsaved changes
         self.unsaved_changes = True
 
-    def is_game_path_valid(self, path):
-        """Check if the wordlist and popdefs files exist at the given path"""
-        dircheck = glob.glob(path + "*")
-        return (path + WORDLIST_FILE in dircheck and path + POPDEFS_FILE in dircheck)
-
     def load_files(self, select = True, do_or_die = False):
         """Load the wordlist and the popdefs (threaded)"""
         self.thread_process(lambda: self.__load_files(select, do_or_die), message = "Loading...")
@@ -668,7 +551,7 @@ class Editor(Tk):
     def __load_files(self, select = True, do_or_die = False):
         """Load the wordlist and the popdefs"""
         #Ask the user for a directory if the current one is invalid, even if the select argument is false
-        select = select or not self.is_game_path_valid(self.game_path)
+        select = select or not bw.is_game_path_valid(self.game_path)
 
         #While we need to select something
         while select:
@@ -684,23 +567,19 @@ class Editor(Tk):
                     self.destroy()
                     sys.exit()
 
-            select = not self.is_game_path_valid(response + os.sep) #If the game path is valid, we are no longer selecting
+            select = not bw.is_game_path_valid(response + os.sep) #If the game path is valid, we are no longer selecting
             if select:
                 mb.showerror("Invalid directory", "Could not find the word list and pop definitions here.")
             else:
                 self.game_path = response + os.sep #We got a new valid directory
 
         #First, load the wordlist
-        with open(self.game_path + WORDLIST_FILE, encoding = WORDLIST_ENC) as f:
-            wordlist = f.read()
-
-        self.words = self.unpack_wordlist(wordlist)
+        with open(self.game_path + bw.WORDLIST_FILE, encoding = bw.WORDLIST_ENC) as f:
+            self.words = bw.unpack_wordlist(f.read().strip())
 
         #Then, load the popdefs
-        with open(self.game_path + POPDEFS_FILE, encoding = POPDEFS_ENC) as f:
-            data = f.read().strip().splitlines()
-
-        self.defs = {l.split("\t")[0].lower() : l.split("\t")[1] for l in data}
+        with open(self.game_path + bw.POPDEFS_FILE, encoding = bw.POPDEFS_ENC) as f:
+            self.defs = bw.unpack_popdefs(f.read().strip())
 
         #Update the query list
         self.update_query()
@@ -739,19 +618,18 @@ class Editor(Tk):
         #Backup system
         if backup:
             try:
-                shutil.copy(self.game_path + WORDLIST_FILE, self.game_path + WORDLIST_FILE + BACKUP_SUFFIX)
-                shutil.copy(self.game_path + POPDEFS_FILE, self.game_path + POPDEFS_FILE + BACKUP_SUFFIX)
+                shutil.copy(self.game_path + bw.WORDLIST_FILE, self.game_path + bw.WORDLIST_FILE + BACKUP_SUFFIX)
+                shutil.copy(self.game_path + bw.POPDEFS_FILE, self.game_path + bw.POPDEFS_FILE + BACKUP_SUFFIX)
             except FileNotFoundError:
                 mb.showerror("Backup failed", "Could not back up the original files because they have disappeared.")
 
         #First, save the wordlist
-        with open(self.game_path + WORDLIST_FILE, "w", encoding = WORDLIST_ENC) as f:
-            f.write(self.pack_wordlist(self.words))
+        with open(self.game_path + bw.WORDLIST_FILE, "w", encoding = bw.WORDLIST_ENC) as f:
+            f.write(bw.pack_wordlist(self.words))
 
         #Then, save the popdefs
-        with open(self.game_path + POPDEFS_FILE, "w", encoding = POPDEFS_ENC) as f:
-            for word in self.defs.keys():
-                f.write(word.upper() + "\t" + self.defs[word] + "\n")
+        with open(self.game_path + bw.POPDEFS_FILE, "w", encoding = bw.POPDEFS_ENC) as f:
+            f.write(bw.pack_popdefs(self.defs))
 
         self.unsaved_changes = False #All changes are now saved
 
