@@ -174,7 +174,7 @@ class Editor(Tk):
         #Frame for word and definition
         self.worddef_frame = Frame(self)
         self.worddef_frame.grid(row = 0, column = 1, sticky = NSEW)
-        self.worddef_frame.bind_all("<Key>", self.check_def_change)
+        self.worddef_frame.bind_all("<Key>", self.regulate_def_buttons)
         self.columnconfigure(1, weight = 1)
 
         #Subframe for word and usage display
@@ -254,9 +254,9 @@ class Editor(Tk):
 
     def unique_disable_handlers(self):
         """Run all unique widget disabling handlers"""
-        self.check_def_change()
+        self.regulate_def_buttons()
 
-    def check_def_change(self, *args):
+    def regulate_def_buttons(self, *args):
         """Check if the definition has changed, and dis/en-able the reset and save buttons accordingly"""
         #Do not enable or disable these widgets if the GUI is busy
         if self.busy_status:
@@ -265,7 +265,7 @@ class Editor(Tk):
         def_entry = self.def_field.get("0.0", END).strip() #Get the current entry
 
         #There is no selected word
-        if self.get_selected_word == NO_WORD:
+        if self.get_selected_word() == NO_WORD:
             new_state = DISABLED
 
         #We have an old definition for this word
@@ -292,6 +292,193 @@ class Editor(Tk):
 
         for button in (self.reset_def_bttn, self.save_def_bttn):
             button.config(state = new_state)
+
+    def load_files(self, select = True, do_or_die = False):
+        """Load the wordlist and the popdefs (threaded)"""
+        self.thread_process(lambda: self.__load_files(select, do_or_die), message = "Loading...")
+
+    def __load_files(self, select = True, do_or_die = False):
+        """Load the wordlist and the popdefs"""
+        #Ask the user for a directory if the current one is invalid, even if the select argument is false
+        select = select or not bw.is_game_path_valid(self.game_path)
+
+        #While we need to select something
+        while select:
+            while True: #Keep asking for an input
+                response = filedialog.askdirectory(title = "Game directory", initialdir = self.game_path)
+                if response:
+                    break #We got a response, so break the loop
+
+                if not do_or_die:
+                    return #We did not get a response, but we aren't supposed to force. Assumes the game is not installed to root directory.
+
+                if mb.askyesno("Cannot cancel", "The program needs a valid directory to continue. Exit the program?"): #Do or die
+                    self.destroy()
+                    sys.exit()
+
+            select = not bw.is_game_path_valid(response + os.sep) #If the game path is valid, we are no longer selecting
+            if select:
+                mb.showerror("Invalid directory", "Could not find the word list and pop definitions here.")
+            else:
+                self.game_path = response + os.sep #We got a new valid directory
+
+        #First, load the wordlist
+        with open(self.game_path + bw.WORDLIST_FILE, encoding = bw.WORDLIST_ENC) as f:
+            self.words = bw.unpack_wordlist(f.read().strip())
+
+        #Then, load the popdefs
+        with open(self.game_path + bw.POPDEFS_FILE, encoding = bw.POPDEFS_ENC) as f:
+            self.defs = bw.unpack_popdefs(f.read().strip())
+
+        #Update the query list
+        self.update_query()
+
+        #The files were just (re)loaded, so there are no unsaved changes
+        self.unsaved_changes = False
+
+    def save_files(self, *args, backup=False):
+        """Save the worldist and popdefs"""
+        #*args is there to receive unnecessary event data as this is a callback method
+
+        #Backup system
+        if backup:
+            try:
+                shutil.copy(self.game_path + bw.WORDLIST_FILE, self.game_path + bw.WORDLIST_FILE + BACKUP_SUFFIX)
+                shutil.copy(self.game_path + bw.POPDEFS_FILE, self.game_path + bw.POPDEFS_FILE + BACKUP_SUFFIX)
+            except FileNotFoundError:
+                mb.showerror("Backup failed", "Could not back up the original files because they have disappeared.")
+
+        #First, save the wordlist
+        with open(self.game_path + bw.WORDLIST_FILE, "w", encoding = bw.WORDLIST_ENC) as f:
+            f.write(bw.pack_wordlist(self.words))
+
+        #Then, save the popdefs
+        with open(self.game_path + bw.POPDEFS_FILE, "w", encoding = bw.POPDEFS_ENC) as f:
+            f.write(bw.pack_popdefs(self.defs))
+
+        self.unsaved_changes = False #All changes are now saved
+
+    def selection_updated(self, *args):
+        """A new word has been selected, update everything"""
+        #*args is there to receive unnecessary event data as this is a callback method
+
+        self.word_display.config(text = self.get_selected_word()) #Display the current word
+        self.load_definition() #Load and display the current definition
+
+        #If no word is selected, clear the usage statistic display
+        if self.get_selected_word() == NO_WORD:
+            self.usage_display.config(text = "")
+            return
+
+        #Otherwise, try to load and display usage statistics
+        try:
+            usage = bw.get_word_usage(self.get_selected_word())
+            self.usage_display.config(text = WORDFREQ_DISP_PREFIX + str(usage), fg = RARE_COLS[int(usage < bw.RARE_THRESH)])
+        except LookupError:
+            print("Usage lookup faliure. See issue #5.")
+
+    def update_query(self, *args):
+        """Update the list of search results"""
+        #*args is there to receive unnecessary event data as this is a callback method
+
+        #Do not allow any capitalization or non-letters in the search field
+        self.search.set("".join([char for char in self.search.get().lower() if char in bw.ALPHABET]))
+
+        #Comprehensively filter the wordlist to only matching words
+        query = [word for word in self.words if self.search.get() in word]
+
+        #Sort search results by how close the search query is to the beginning
+        query.sort(key = lambda x: x.index(self.search.get()))
+
+        #Update the query list
+        self.query_list.set(query)
+        self.selection_updated()
+
+    def get_selected_word(self):
+        """Get the currently selected word"""
+        if self.query_box.curselection(): #Something is selected
+            #Return the word at the starting index of the selection
+            #(only one word can be selected so the end doesn't matter)
+            return self.query_box.get(self.query_box.curselection()[0])
+        return NO_WORD
+
+    def load_definition(self):
+        """Load the definition of the selected word if there is one"""
+
+        #Clear any old displayed definition, regardless
+        self.def_field.delete(0.0, END)
+
+        #If we have a definition for this word, display it
+        if self.get_selected_word() != NO_WORD and self.get_selected_word() in self.defs.keys():
+            self.def_field.insert(0.0, self.defs[self.get_selected_word()])
+
+        #Disable definition reset and save buttons now that a definition was (re)loaded
+        self.regulate_def_buttons()
+
+    def update_definition(self):
+        """Update the stored definition for a word"""
+        def_entry = self.def_field.get("0.0", END).strip()
+
+        #We have a definition to save
+        if def_entry:
+            self.defs[self.get_selected_word()] = def_entry
+
+        #We had a definition, and it has been deleted
+        elif self.get_selected_word() in self.defs.keys():
+            del self.defs[self.get_selected_word()]
+
+        #There are now unsaved changes
+        self.unsaved_changes = True
+
+        #In case any whitespace was stripped off of the start or end, reload the definition
+        self.load_definition()
+
+        #Disable definition reset and save buttons now that the definition was saved
+        self.regulate_def_buttons()
+
+    def is_len_valid(self, word, notify = False):
+        """Check if a word's length is valid. Notify triggers a GUI popup if length is invalid"""
+        if notify and not bw.WORD_LENGTH_MIN <= len(word) <= bw.WORD_LENGTH_MAX:
+            #Dialog auto-selects the word "short" or "long" based on wether the invalid length was a too long case or not
+            mb.showerror("Word is too " + ("short", "long")[int(len(word) > bw.WORD_LENGTH_MAX)], f"Word must be between {bw.WORD_LENGTH_MIN} and {bw.WORD_LENGTH_MAX} letters long.")
+
+        return bw.WORD_LENGTH_MIN <= len(word) <= bw.WORD_LENGTH_MAX
+
+    def add_word(self):
+        """Create a new word entry"""
+        new = dialog.askstring("New word", "Enter the new word to add:")
+
+        #Allow the user to cancel, and also ensure the word is of allowed length
+        if not new or not self.is_len_valid(new, notify = True):
+            return
+        new = new.lower()
+
+        #Ensure that the word is only letters
+        for char in new:
+            if char not in bw.ALPHABET:
+                mb.showerror("Invalid character found", "Word must be only letters (no numbers or symbols).")
+                return
+
+        #If the word really is new, add it
+        if new not in self.words:
+            #Add the new word
+            self.words.append(new)
+            self.words.sort()
+
+            #Update the query
+            self.update_query()
+
+            #There are now unsaved changes
+            self.unsaved_changes = True
+
+        else:
+            mb.showinfo("Already have word", f"The word {new} is already in the word list.")
+
+        #Highlight and scroll to the new word even if it wasn't actually new, so long as it is in our current search results
+        if new in self.query_list.get():
+            word_query_index = self.query_list.get().index(new)
+            self.query_box.selection_set(word_query_index)
+            self.query_box.yview(word_query_index)
 
     def mass_add_words(self):
         """Add a whole file's list of words (threaded)"""
@@ -407,13 +594,24 @@ class Editor(Tk):
         if mb.askyesno("Words deleted", f"Removed {len(old_words)} words from the word list. Save changes to disk now?"):
             self.save_files()
 
-    def is_len_valid(self, word, notify = False):
-        """Check if a word's length is valid. Notify triggers a GUI popup if length is invalid"""
-        if notify and not bw.WORD_LENGTH_MIN <= len(word) <= bw.WORD_LENGTH_MAX:
-            #Dialog auto-selects the word "short" or "long" based on wether the invalid length was a too long case or not
-            mb.showerror("Word is too " + ("short", "long")[int(len(word) > bw.WORD_LENGTH_MAX)], f"Word must be between {bw.WORD_LENGTH_MIN} and {bw.WORD_LENGTH_MAX} letters long.")
+    def del_word(self, *args):
+        """Delete the currently selected word"""
+        #No word is selected, so nothing to delete
+        if self.get_selected_word() == NO_WORD:
+            return
 
-        return bw.WORD_LENGTH_MIN <= len(word) <= bw.WORD_LENGTH_MAX
+        #Remove the word from our words list
+        self.words.remove(self.get_selected_word())
+
+        #If we have a definition saved for this word, delete it
+        if self.get_selected_word() in self.defs.keys():
+            del self.defs[self.get_selected_word()]
+
+        #Refresh the query list
+        self.update_query()
+
+        #There are now unsaved changes
+        self.unsaved_changes = True
 
     def del_invalid_len_words(self):
         """Remove all words of invalid length from the wordlist (threaded)"""
@@ -437,197 +635,6 @@ class Editor(Tk):
 
         if mb.askyesno("Invalid length words deleted", f"Found and deleted {len(invalid)} words of invalid length from the word list. Save changes to disk now?"):
             self.save_files()
-
-    def selection_updated(self, *args):
-        """A new word has been selected, update everything"""
-        #*args is there to receive unnecessary event data as this is a callback method
-
-        self.word_display.config(text = self.get_selected_word()) #Display the current word
-        self.load_definition() #Load and display the current definition
-
-        #If no word is selected, clear the usage statistic display
-        if self.get_selected_word() == NO_WORD:
-            self.usage_display.config(text = "")
-            return
-
-        #Otherwise, try to load and display usage statistics
-        try:
-            usage = bw.get_word_usage(self.get_selected_word())
-            self.usage_display.config(text = WORDFREQ_DISP_PREFIX + str(usage), fg = RARE_COLS[int(usage < bw.RARE_THRESH)])
-        except LookupError:
-            print("Usage lookup faliure. See issue #5.")
-
-    def load_definition(self):
-        """Load the definition of the selected word if there is one"""
-
-        #Clear any old displayed definition, regardless
-        self.def_field.delete(0.0, END)
-
-        #If we have a definition for this word, display it
-        if self.get_selected_word() != NO_WORD and self.get_selected_word() in self.defs.keys():
-            self.def_field.insert(0.0, self.defs[self.get_selected_word()])
-
-        #Disable definition reset and save buttons now that a definition was (re)loaded
-        self.check_def_change()
-
-    def update_definition(self):
-        """Update the stored definition for a word"""
-        def_entry = self.def_field.get("0.0", END).strip()
-
-        #We have a definition to save
-        if def_entry:
-            self.defs[self.get_selected_word()] = def_entry
-
-        #We had a definition, and it has been deleted
-        elif self.get_selected_word() in self.defs.keys():
-            del self.defs[self.get_selected_word()]
-
-        #There are now unsaved changes
-        self.unsaved_changes = True
-
-        #In case any whitespace was stripped off of the start or end, reload the definition
-        self.load_definition()
-
-        #Disable definition reset and save buttons now that the definition was saved
-        self.check_def_change()
-
-    def add_word(self):
-        """Create a new word entry"""
-        new = dialog.askstring("New word", "Enter the new word to add:")
-
-        #Allow the user to cancel, and also ensure the word is of allowed length
-        if not new or not self.is_len_valid(new, notify = True):
-            return
-        new = new.lower()
-
-        #Ensure that the word is only letters
-        for char in new:
-            if char not in bw.ALPHABET:
-                mb.showerror("Invalid character found", "Word must be only letters (no numbers or symbols).")
-                return
-
-        #If the word really is new, add it
-        if new not in self.words:
-            #Add the new word
-            self.words.append(new)
-            self.words.sort()
-
-            #Update the query
-            self.update_query()
-
-            #There are now unsaved changes
-            self.unsaved_changes = True
-
-        else:
-            mb.showinfo("Already have word", f"The word {new} is already in the word list.")
-
-        #Highlight and scroll to the new word even if it wasn't actually new, so long as it is in our current search results
-        if new in self.query_list.get():
-            word_query_index = self.query_list.get().index(new)
-            self.query_box.selection_set(word_query_index)
-            self.query_box.yview(word_query_index)
-
-    def update_query(self, *args):
-        """Update the list of search results"""
-        #*args is there to receive unnecessary event data as this is a callback method
-
-        #Do not allow any capitalization or non-letters in the search field
-        self.search.set("".join([char for char in self.search.get().lower() if char in bw.ALPHABET]))
-
-        #Comprehensively filter the wordlist to only matching words
-        query = [word for word in self.words if self.search.get() in word]
-
-        #Sort search results by how close the search query is to the beginning
-        query.sort(key = lambda x: x.index(self.search.get()))
-
-        #Update the query list
-        self.query_list.set(query)
-        self.selection_updated()
-
-    def auto_define(self):
-        """Pull a definition from the web and show it"""
-        word = self.get_selected_word()
-        if word == NO_WORD:
-            return
-
-        definition = bw.build_auto_def(word)
-        if not definition:
-            mb.showerror("Could not autodefine", f"No useful definition returned from PyDictionary for {word}")
-            return
-
-        #Write out the auto-definition, but do not save
-        self.def_field.delete(0.0, END)
-        self.def_field.insert(0.0, definition)
-
-    def get_selected_word(self):
-        """Get the currently selected word"""
-        if self.query_box.curselection(): #Something is selected
-            #Return the word at the starting index of the selection
-            #(only one word can be selected so the end doesn't matter)
-            return self.query_box.get(self.query_box.curselection()[0])
-        return NO_WORD
-
-    def del_word(self, *args):
-        """Delete the currently selected word"""
-        #No word is selected, so nothing to delete
-        if self.get_selected_word() == NO_WORD:
-            return
-
-        #Remove the word from our words list
-        self.words.remove(self.get_selected_word())
-
-        #If we have a definition saved for this word, delete it
-        if self.get_selected_word() in self.defs.keys():
-            del self.defs[self.get_selected_word()]
-
-        #Refresh the query list
-        self.update_query()
-
-        #There are now unsaved changes
-        self.unsaved_changes = True
-
-    def load_files(self, select = True, do_or_die = False):
-        """Load the wordlist and the popdefs (threaded)"""
-        self.thread_process(lambda: self.__load_files(select, do_or_die), message = "Loading...")
-
-    def __load_files(self, select = True, do_or_die = False):
-        """Load the wordlist and the popdefs"""
-        #Ask the user for a directory if the current one is invalid, even if the select argument is false
-        select = select or not bw.is_game_path_valid(self.game_path)
-
-        #While we need to select something
-        while select:
-            while True: #Keep asking for an input
-                response = filedialog.askdirectory(title = "Game directory", initialdir = self.game_path)
-                if response:
-                    break #We got a response, so break the loop
-
-                if not do_or_die:
-                    return #We did not get a response, but we aren't supposed to force. Assumes the game is not installed to root directory.
-
-                if mb.askyesno("Cannot cancel", "The program needs a valid directory to continue. Exit the program?"): #Do or die
-                    self.destroy()
-                    sys.exit()
-
-            select = not bw.is_game_path_valid(response + os.sep) #If the game path is valid, we are no longer selecting
-            if select:
-                mb.showerror("Invalid directory", "Could not find the word list and pop definitions here.")
-            else:
-                self.game_path = response + os.sep #We got a new valid directory
-
-        #First, load the wordlist
-        with open(self.game_path + bw.WORDLIST_FILE, encoding = bw.WORDLIST_ENC) as f:
-            self.words = bw.unpack_wordlist(f.read().strip())
-
-        #Then, load the popdefs
-        with open(self.game_path + bw.POPDEFS_FILE, encoding = bw.POPDEFS_ENC) as f:
-            self.defs = bw.unpack_popdefs(f.read().strip())
-
-        #Update the query list
-        self.update_query()
-
-        #The files were just (re)loaded, so there are no unsaved changes
-        self.unsaved_changes = False
 
     def del_orphaned_defs(self):
         """Find and delete any orphaned definitions (threaded)"""
@@ -653,27 +660,20 @@ class Editor(Tk):
         if mb.askyesno("Orphaned definitions deleted", f"Found and deleted {len(orphaned)} orphaned definitions. Save now?"):
             self.save_files()
 
-    def save_files(self, *args, backup=False):
-        """Save the worldist and popdefs"""
-        #*args is there to receive unnecessary event data as this is a callback method
+    def auto_define(self):
+        """Pull a definition from the web and show it"""
+        word = self.get_selected_word()
+        if word == NO_WORD:
+            return
 
-        #Backup system
-        if backup:
-            try:
-                shutil.copy(self.game_path + bw.WORDLIST_FILE, self.game_path + bw.WORDLIST_FILE + BACKUP_SUFFIX)
-                shutil.copy(self.game_path + bw.POPDEFS_FILE, self.game_path + bw.POPDEFS_FILE + BACKUP_SUFFIX)
-            except FileNotFoundError:
-                mb.showerror("Backup failed", "Could not back up the original files because they have disappeared.")
+        definition = bw.build_auto_def(word)
+        if not definition:
+            mb.showerror("Could not autodefine", f"No useful definition returned from PyDictionary for {word}")
+            return
 
-        #First, save the wordlist
-        with open(self.game_path + bw.WORDLIST_FILE, "w", encoding = bw.WORDLIST_ENC) as f:
-            f.write(bw.pack_wordlist(self.words))
-
-        #Then, save the popdefs
-        with open(self.game_path + bw.POPDEFS_FILE, "w", encoding = bw.POPDEFS_ENC) as f:
-            f.write(bw.pack_popdefs(self.defs))
-
-        self.unsaved_changes = False #All changes are now saved
+        #Write out the auto-definition, but do not save
+        self.def_field.delete(0.0, END)
+        self.def_field.insert(0.0, definition)
 
 #Create an editor window
 if __name__ == "__main__":
