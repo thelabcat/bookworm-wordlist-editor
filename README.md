@@ -33,4 +33,40 @@ To run from source, install Python 3.x, and then the dependencies, then use Pyth
     - Add several words: Select a text file of new words and add them all.
     - Delete several words: Select a text file of words and delete them all.
 
+## Information on antivirus false positives for PyInstaller executables
+
+Recently, I discovered that multiple antivirus services are consistently flagging any and all executables packaged with PyInstaller. This is a mistake: While malware could certainly be written in Python and subsequently packaged with PyInstaller into an exe, the exe would be malicious because of the packaged Python code, not because of PyInstaller. I've reported the problem to the antivirus services that I found false positive reporting forms for, but only the specific app version was whitelisted, if anything at all. I tested BookWorm Deluxe Wordlist Editor v1.5.0 win x64 on April 27 in VirusTotal. It showed no malicious behavior from the application inside sandbox tests, and provided the following list of flags from security vendors. If you receive a different report than this, or you know of a more permanent solution than filing false positive reports every PyInstaller exe release, please let me know, as this has been an ongoing problem.
+
+
+<table>
+    <tr>
+        <th>Antivirus service</th>
+        <th>Report for this PyInstaller EXE</th>
+    </tr>
+    <tr>
+        <td>Bkav Pro</td>
+        <td>W64.AIDetectMalware</td>
+    </tr>
+    <tr>
+        <td>Elastic</td>
+        <td>Malicious (moderate Confidence)</td>
+    </tr>
+    <tr>
+        <td>Jiangmin</td>
+        <td>TrojanSpy.Agent.afwu</td>
+    </tr>
+    <tr>
+        <td>Malwarebytes</td>
+        <td>Malware.AI.3767809634</td>
+    </tr>
+    <tr>
+        <td>SecureAge</td>
+        <td>Malicious</td>
+    </tr>
+    <tr>
+        <td>Skyhigh (SWG)</td>
+        <td>BehavesLike.Win64.Agent.tc</td>
+    </tr>
+</table>
+
 Hope this helps! S.D.G.
