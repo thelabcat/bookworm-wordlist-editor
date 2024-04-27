@@ -568,10 +568,11 @@ class Editor(Tk):
         else:
             mb.showinfo("Already have word", f"The word {new} is already in the word list.")
 
-        #Highlight the new word even if it wasn't actually new, so long as it is in our current search results
-        #TODO this isn't working. See issue #4
+        #Highlight and scroll to the new word even if it wasn't actually new, so long as it is in our current search results
         if new in self.query_list.get():
-            self.query_box.activate(self.query_list.get().index(new))
+            word_query_index = self.query_list.get().index(new)
+            self.query_box.selection_set(word_query_index)
+            self.query_box.yview(word_query_index)
 
     def update_query(self, *args):
         """Update the list of search results"""
