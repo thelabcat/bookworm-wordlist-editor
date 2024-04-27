@@ -50,6 +50,8 @@ class Editor(Tk):
 
         self.thread = None #Any thread the GUI might spawn
 
+        self.busy_status = False #Is the GUI currently busy (all widgets disabled)?
+
         #Handle unsaved changes
         self.__unsaved_changes = False
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
@@ -172,6 +174,7 @@ class Editor(Tk):
         #Frame for word and definition
         self.worddef_frame = Frame(self)
         self.worddef_frame.grid(row = 0, column = 1, sticky = NSEW)
+        self.worddef_frame.bind_all("<Key>", self.check_def_change)
         self.columnconfigure(1, weight = 1)
 
         #Subframe for word and usage display
@@ -242,6 +245,53 @@ class Editor(Tk):
             self.menubar.entryconfig(entry, state = new_state)
         for widget in self.widgets_to_disable:
             widget.config(state = new_state)
+
+        #For other widget disablers to reference
+        self.busy_status = busy_status
+
+        #Rerun any unique widget disablers
+        self.unique_disable_handlers()
+
+    def unique_disable_handlers(self):
+        """Run all unique widget disabling handlers"""
+        self.check_def_change()
+
+    def check_def_change(self, *args):
+        """Check if the definition has changed, and dis/en-able the reset and save buttons accordingly"""
+        #Do not enable or disable these widgets if the GUI is busy
+        if self.busy_status:
+            return
+
+        def_entry = self.def_field.get("0.0", END).strip() #Get the current entry
+
+        #There is no selected word
+        if self.get_selected_word == NO_WORD:
+            new_state = DISABLED
+
+        #We have an old definition for this word
+        elif self.get_selected_word() in self.defs.keys():
+            #The user deleted the old definition
+            if not def_entry:
+                new_state = NORMAL
+
+            #The old definition is the same as the new one
+            elif self.defs[self.get_selected_word()] == def_entry:
+                new_state = DISABLED
+
+            #There is a new definition
+            else:
+                new_state = NORMAL
+
+        #We do not have an old definition, and there is a new one
+        elif def_entry:
+            new_state = NORMAL
+
+        #There was no old or new definition
+        else:
+            new_state = DISABLED
+
+        for button in (self.reset_def_bttn, self.save_def_bttn):
+            button.config(state = new_state)
 
     def mass_add_words(self):
         """Add a whole file's list of words (threaded)"""
@@ -414,40 +464,32 @@ class Editor(Tk):
         self.def_field.delete(0.0, END)
 
         #If we have a definition for this word, display it
-        if self.get_selected_word() in self.defs.keys():
+        if self.get_selected_word() != NO_WORD and self.get_selected_word() in self.defs.keys():
             self.def_field.insert(0.0, self.defs[self.get_selected_word()])
+
+        #Disable definition reset and save buttons now that a definition was (re)loaded
+        self.check_def_change()
 
     def update_definition(self):
         """Update the stored definition for a word"""
         def_entry = self.def_field.get("0.0", END).strip()
 
-        #We have an old definition for this word
-        if self.get_selected_word() in self.defs.keys():
-            #The user deleted the old definition
-            if not def_entry:
-                del self.defs[self.get_selected_word()]
-
-            #The old definition is the same as the new one
-            elif self.defs[self.get_selected_word()] == def_entry:
-                return
-
-            #There is a new definition
-            else:
-                self.defs[self.get_selected_word()] = def_entry
-
-        #We do not have an old definition, and there is a new one
-        elif def_entry:
+        #We have a definition to save
+        if def_entry:
             self.defs[self.get_selected_word()] = def_entry
 
-        #There was no old or new definition
-        else:
-            return
+        #We had a definition, and it has been deleted
+        elif self.get_selected_word() in self.defs.keys():
+            del self.defs[self.get_selected_word()]
 
         #There are now unsaved changes
         self.unsaved_changes = True
 
         #In case any whitespace was stripped off of the start or end, reload the definition
         self.load_definition()
+
+        #Disable definition reset and save buttons now that the definition was saved
+        self.check_def_change()
 
     def add_word(self):
         """Create a new word entry"""
