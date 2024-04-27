@@ -153,7 +153,7 @@ class Editor(Tk):
         self.search_entry = Entry(self.search_frame, textvariable = self.search)
         self.search_entry.grid(row = 0, column = 1, sticky = NSEW)
         self.search_frame.columnconfigure(1, weight = 1)
-        self.search_clear_bttn = Button(self.search_frame, text = "X", command = lambda: self.search_entry.delete(0, END))
+        self.search_clear_bttn = Button(self.search_frame, text = "X", command = lambda: self.search.set(""))
         self.search_clear_bttn.grid(row = 0, column = 2, sticky = N + S + E)
         self.widgets_to_disable += [self.search_label, self.search_entry, self.search_clear_bttn]
 
@@ -257,7 +257,20 @@ class Editor(Tk):
 
     def unique_disable_handlers(self):
         """Run all unique widget disabling handlers"""
+        self.regulate_word_buttons()
         self.regulate_def_buttons()
+
+    def regulate_word_buttons(self):
+        """Enable or disable the word handling buttons based on if a word is selected"""
+        #Do not enable or disable these widgets if the GUI is busy
+        if self.busy_status:
+            return
+
+        #buttons should be disabled if no word is selected
+        new_state = (NORMAL, DISABLED)[int(self.selected_word == NO_WORD)]
+
+        for button in (self.autodef_bttn, self.del_bttn):
+            button.config(state = new_state)
 
     def regulate_def_buttons(self, *args):
         """Check if the definition has changed, and dis/en-able the reset and save buttons accordingly"""
@@ -383,6 +396,9 @@ class Editor(Tk):
         except LookupError:
             print("Usage lookup faliure. See issue #5.")
 
+        #Enable or disable the word handling buttons based on the selection
+        self.regulate_word_buttons()
+
     def update_query(self, *args):
         """Update the list of search results"""
         #*args is there to receive unnecessary event data as this is a callback method
@@ -390,15 +406,28 @@ class Editor(Tk):
         #Do not allow any capitalization or non-letters in the search field
         self.search.set("".join([char for char in self.search.get().lower() if char in bw.ALPHABET]))
 
-        #Comprehensively filter the wordlist to only matching words
-        query = [word for word in self.words if self.search.get() in word]
+        search = self.search.get()
 
-        #Sort search results by how close the search query is to the beginning
-        query.sort(key = lambda x: x.index(self.search.get()))
+        #Comprehensively filter the wordlist to only matching words
+        if search:
+            query = [word for word in self.words if search in word]
+            #Sort search results by how close the search query is to the beginning
+            query.sort(key = lambda x: x.index(search))
+
+        #The search was cleared
+        else:
+            query = self.words
 
         #Update the query list
         self.query_list.set(query)
-        self.selection_updated()
+
+        #There was a search entered, highlight the top result
+        if search:
+            self.set_selected_word(query[0])
+
+        #The search was cleared, clear the selection
+        else:
+            self.set_selected_word(None)
 
     def get_selected_word(self):
         """Get the currently selected word"""
@@ -407,6 +436,18 @@ class Editor(Tk):
             #(only one word can be selected so the end doesn't matter)
             return self.query_box.get(self.query_box.curselection()[0])
         return NO_WORD
+
+    def set_selected_word(self, word):
+        """Change what word is selected, if the word is in the query"""
+        #The word is in our current query, so select it
+        if word in self.query_list.get():
+            word_query_index = self.query_list.get().index(word)
+            self.query_box.selection_set(word_query_index)
+            self.query_box.see(word_query_index)
+        elif word == NO_WORD or not word:
+            self.query_box.selection_clear(0, END)
+
+        self.selection_updated()
 
     def load_definition(self):
         """Load the definition of the selected word if there is one"""
@@ -481,10 +522,7 @@ class Editor(Tk):
             mb.showinfo("Already have word", f"The word {new} is already in the word list.")
 
         #Highlight and scroll to the new word even if it wasn't actually new, so long as it is in our current search results
-        if new in self.query_list.get():
-            word_query_index = self.query_list.get().index(new)
-            self.query_box.selection_set(word_query_index)
-            self.query_box.yview(word_query_index)
+        self.set_selected_word(new)
 
     def mass_add_words(self):
         """Add a whole file's list of words (threaded)"""
@@ -680,6 +718,9 @@ class Editor(Tk):
         #Write out the auto-definition, but do not save
         self.def_field.delete(0.0, END)
         self.def_field.insert(0.0, definition)
+
+        #Enable or disable the definition handler buttons accordingly
+        self.regulate_def_buttons()
 
 #Create an editor window
 if __name__ == "__main__":
