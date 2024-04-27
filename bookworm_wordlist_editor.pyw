@@ -439,11 +439,14 @@ class Editor(Tk):
 
     def set_selected_word(self, word):
         """Change what word is selected, if the word is in the query"""
-        #The word is in our current query, so select it
+        #The word is in our current query, so select and view it
         if word in self.query_list.get():
             word_query_index = self.query_list.get().index(word)
+            self.query_box.selection_clear(0, END)
             self.query_box.selection_set(word_query_index)
             self.query_box.see(word_query_index)
+
+        #A no-word was given, clear the selection
         elif word == NO_WORD or not word:
             self.query_box.selection_clear(0, END)
 
