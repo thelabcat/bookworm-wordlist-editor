@@ -107,7 +107,7 @@ class Editor(Tk):
     @unsaved_changes.setter
     def unsaved_changes(self, new_value):
         """Set if we have unsaved changes"""
-        if isinstance(new_value, bool):
+        if not isinstance(new_value, bool):
             raise TypeError("Value for unsaved changes must be bool")
         self.__unsaved_changes = new_value
 
