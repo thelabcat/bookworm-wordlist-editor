@@ -107,7 +107,7 @@ class Editor(Tk):
     @unsaved_changes.setter
     def unsaved_changes(self, new_value):
         """Set if we have unsaved changes"""
-        if type(new_value) != bool:
+        if isinstance(new_value, bool):
             raise TypeError("Value for unsaved changes must be bool")
         self.__unsaved_changes = new_value
 
@@ -120,11 +120,11 @@ class Editor(Tk):
             answer = mb.askyesnocancel("Unsaved changes", "There are currently unsaved changes to the word list and / or popdefs. Save before exiting?")
 
             #The user cancelled the exit
-            if answer == None:
+            if answer is None:
                 return
 
             #The user clicked yes
-            elif answer:
+            if answer:
                 self.save_files()
 
         #Close the window
@@ -757,4 +757,3 @@ class Editor(Tk):
 #Create an editor window
 if __name__ == "__main__":
     Editor()
-
