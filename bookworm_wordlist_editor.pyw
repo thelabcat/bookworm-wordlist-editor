@@ -387,14 +387,14 @@ class Editor(Tk):
         #If no word is selected, clear the usage statistic display
         if self.selected_word == NO_WORD:
             self.usage_display.config(text = "")
-            return
 
         #Otherwise, try to load and display usage statistics
-        try:
-            usage = bw.get_word_usage(self.selected_word)
-            self.usage_display.config(text = WORDFREQ_DISP_PREFIX + str(usage), fg = RARE_COLS[int(usage < bw.RARE_THRESH)])
-        except LookupError:
-            print("Usage lookup faliure. See issue #5.")
+        else:
+            try:
+                usage = bw.get_word_usage(self.selected_word)
+                self.usage_display.config(text = WORDFREQ_DISP_PREFIX + str(usage), fg = RARE_COLS[int(usage < bw.RARE_THRESH)])
+            except LookupError:
+                print("Usage lookup faliure. See issue #5.")
 
         #Enable or disable the word handling buttons based on the selection
         self.regulate_word_buttons()
@@ -421,11 +421,11 @@ class Editor(Tk):
         #Update the query list
         self.query_list.set(query)
 
-        #There was a search entered, highlight the top result
-        if search:
+        #There was a search entered, and it returned values, highlight the top result
+        if search and query:
             self.set_selected_word(query[0])
 
-        #The search was cleared, clear the selection
+        #The search was cleared or returned no search results
         else:
             self.set_selected_word(None)
 
@@ -440,14 +440,14 @@ class Editor(Tk):
     def set_selected_word(self, word):
         """Change what word is selected, if the word is in the query"""
         #The word is in our current query, so select and view it
-        if word in self.query_list.get():
+        if word and word in self.query_list.get():
             word_query_index = self.query_list.get().index(word)
             self.query_box.selection_clear(0, END)
             self.query_box.selection_set(word_query_index)
             self.query_box.see(word_query_index)
 
-        #A no-word was given, clear the selection
-        elif word == NO_WORD or not word:
+        #Something not in the query list was given, clear the selection
+        else:
             self.query_box.selection_clear(0, END)
 
         self.selection_updated()
