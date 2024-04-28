@@ -535,13 +535,15 @@ class Editor(Tk):
         """Add a whole file's worth of words"""
 
         #Open and read a file with a human-readable list of new words
-        with filedialog.askopenfile(title = "Select human-readable list of words", filetypes = [("Plain text", "*.txt")]) as f:
-            #The user cancelled via the open file dialog
-            if not f:
-                return
+        f = filedialog.askopenfile(title = "Select human-readable list of words", filetypes = [("Plain text", "*.txt")])
 
-            #Read the file
-            text = f.read().strip()
+        #The user cancelled via the open file dialog
+        if not f:
+            return
+
+        #Read and close the file
+        text = f.read().strip()
+        f.close()
 
         #filter file to only letters and spaces
         alpha_text = "".join([c for c in text if c.lower() in bw.ALPHABET or c.isspace()])
