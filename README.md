@@ -22,7 +22,7 @@ To run from source, install Python 3.x, and then the dependencies, then use Pyth
     - Auto-create a popdef using PyDictionary (requires an internet connection).
     - Delete the word from the wordlist.
 - You can search for a word with the search box, using the X button to clear the search query.
-- You can add a new word to the wordlist with the New button. Once added, it will become selected.
+- You can add a new word to the wordlist with the Add word button. Once added, it will become selected.
 - The File menu provides the following operations:
     - Open (Ctrl + O): Open a different word list and popdefs file pair.
     - Reload: Reload the current word list and popdefs file pair, reversing all your changes.
