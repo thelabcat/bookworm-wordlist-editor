@@ -668,7 +668,7 @@ class Editor(Tk):
         """Remove all words of invalid length from the wordlist"""
         invalid = [word for word in self.words if not self.is_len_valid(word)]
         if not invalid:
-            mb.showinfo("No invalid length words", "All words are already between {bw.WORD_LENGTH_MIN} and {bw.WORD_LENGTH_MAX} letters long.")
+            mb.showinfo("No invalid length words", f"All words are already between {bw.WORD_LENGTH_MIN} and {bw.WORD_LENGTH_MAX} letters long.")
             return
 
         for word in invalid:
