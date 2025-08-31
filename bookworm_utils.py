@@ -1,7 +1,15 @@
-#!/usr/bin/env python3
+# !/usr/bin/env python3
 """BookWorm Utilities
 
 Tools for loading, editing, and saving the wordlist of BookWorm Deluxe
+
+This file is part of BookWorm Deluxe Wordlist Editor.
+
+BookWorm Deluxe Wordlist Editor is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+
+BookWorm Deluxe Wordlist Editor is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with BookWorm Deluxe Wordlist Editor. If not, see <https://www.gnu.org/licenses/>.
 
 S.D.G.
 """
@@ -12,10 +20,10 @@ import platform
 from PyDictionary import PyDictionary as dic
 from wordfreq import zipf_frequency
 
-#Language and charset information
+# Language and charset information
 ALPHABET = "abcdefghijklmnopqrstuvwxyz"
 NUMERIC = "1234567890"
-WORD_TYPES = { #Word types that PyDictionary may return, and their abbreviations
+WORD_TYPES = {  # Word types that PyDictionary may return, and their abbreviations
     "Noun":"n.",
     "Verb":"v.",
     "Adjective":"adj.",
@@ -24,49 +32,69 @@ WORD_TYPES = { #Word types that PyDictionary may return, and their abbreviations
     "Preposition":"prep.",
     "Conjugation":"conj."
         }
-LANG = "en" #Language to use when checking word rarity
-RARE_THRESH = 3.5 #Words with usage less than this should probably get definitions
+LANG = "en"  # Language to use when checking word rarity
+RARE_THRESH = 3.5  # Words with usage less than this should probably get definitions
 
-#BookWorm Deluxe's internal word length delimiters'
+# BookWorm Deluxe's internal word length delimiters'
 WORD_LENGTH_MIN = 3
 WORD_LENGTH_MAX = 12
 
-#File paths and related info
+# File paths and related info
 SYS_USER = getpass.getuser()
-GAME_PATH_DEFAULT={"Linux" : f"/home/{SYS_USER}/.wine/drive_c/Program Files/PopCap Games/BookWorm Deluxe/",
-                   "Darwin" : f"/Users/{SYS_USER}/.wine/drive_c/Program Files/PopCap Games/BookWorm Deluxe/",
-                   "Windows" : "C:\\Program Files\\PopCap Games\\BookWorm Deluxe\\"
-                   }[platform.system()] #Get the default game path based on the OS
+
+# Get the default game path based on the OS
+GAME_PATH_DEFAULT = {
+    "Linux" : f"/home/{SYS_USER}/.wine/drive_c/Program Files/PopCap Games/BookWorm Deluxe/",
+    "Darwin" : f"/Users/{SYS_USER}/.wine/drive_c/Program Files/PopCap Games/BookWorm Deluxe/",
+    "Windows" : "C:\\Program Files\\PopCap Games\\BookWorm Deluxe\\"
+    }[platform.system()]
+
 WORDLIST_FILE = "wordlist.txt"
 POPDEFS_FILE = "popdefs.txt"
 
-#Encoding to use when opening the wordlist and popdefs files
+# Encoding to use when opening the wordlist and popdefs files
 WORDLIST_ENC = "utf-8"
 POPDEFS_ENC = "iso 8859-15"
 
-def unpack_wordlist(wordlist):
-    """Given a wordlist as text, unpack into a list of words"""
+"""
+The rules for unpacking the dictionary are simple:
+
+    1. Read the number at the start of the line, and copy that many characters from the beginning of the previous word. (If there is no number, copy as many characters as you did last time.)
+
+    2. Append the following letters to the word.
+"""
+# Popdefs format: WORD\t(word form) definiton; another definition
+
+def unpack_wordlist(wordlist: str) -> list:
+    """Unpack the games wordlist syntax
+
+    Args:
+        wordlist (str): The contents of wordlist.txt
+
+    Returns:
+        words (list): The parsed word list"""
+
     words = []
-    copy = 0 #Number of characters to copy from previous word
+    copy = 0  # Number of characters to copy from previous word
     for listing in wordlist.strip().splitlines():
-        #Skip any blank listings
+        # Skip any blank listings
         if not listing:
             continue
 
-        #Parse any numbers at the beginning of the listing as the copy count
+        # Parse any numbers at the beginning of the listing as the copy count
         for i, char in enumerate(listing):
             if char not in NUMERIC:
-                break #i is now the index of the first letter in the listing
+                break  # i is now the index of the first letter in the listing
 
-        copyread = listing[:i] #set copyread to a string of any numbers at the beginning of the listing
+        copyread = listing[:i]  # set copyread to a string of any numbers at the beginning of the listing
 
-        if copyread: #If there a new copy count, don't reuse the last one
+        if copyread:  # If there a new copy count, don't reuse the last one
             copy = int(copyread)
 
-        if words: #Copy from the last word, and add the letters from the listing
+        if words:  # Copy from the last word, and add the letters from the listing
             words.append(words[-1][:copy] + listing[i:])
 
-        elif not copy: #Do not copy from the last word, but trim off a zero copy count
+        elif not copy:  # Do not copy from the last word, but trim off a zero copy count
             words.append(listing[i:])
 
         else:
@@ -74,68 +102,113 @@ def unpack_wordlist(wordlist):
 
     return words
 
-def pack_wordlist(words):
-    """Given a list of words, pack into a wordlist as text"""
+def pack_wordlist(words: list[str]) -> str:
+    """Pack to the game's wordlist syntax
+
+    Args:
+        words (list[str]): A list of words
+
+    Returns:
+        wordlist (str): The contents of a new wordlist.txt"""
+
     listings = []
-    oldcopy = 0 #The previous number of letters copied from the word(s) before the current word
+    oldcopy = 0  # The previous number of letters copied from the word(s) before the current word
     for i, new_word in enumerate(words):
-        if i == 0: #The first word cannot possibly copy anything, and should be listed whole
+        if i == 0:  # The first word cannot possibly copy anything, and should be listed whole
             listings.append(new_word)
             old_word = new_word
             continue
 
-        #Compare the new word with the old one, one letter at a time,
-        #only going to the end of the shortest of the two words
+        # Compare the new word with the old one, one letter at a time,
+        # only going to the end of the shortest of the two words
         for copy, letters in enumerate(zip(old_word, new_word)):
-            if letters[0] != letters[1]: #Compare the two letters at the same position from each word
-                #copy is now set to the index of the first letter the new word does not have in common with the old one
+            if letters[0] != letters[1]:  # Compare the two letters at the same position from each word
+                # copy is now set to the index of the first letter the new word does not have in common with the old one
                 break
 
-        #Only include the copy count in the listing if it is different from the old copy count
-        #Only include the differing letters of the new word
+        # Only include the copy count in the listing if it is different from the old copy count
+        # Only include the differing letters of the new word
         listings.append(str(copy) * (copy != oldcopy) + new_word[copy:])
         oldcopy = copy
         old_word = new_word
 
     return "\n".join(listings).strip()
 
-def unpack_popdefs(popdefs):
-    """Given popdefs as text, unpack into a dict of definitions"""
-    #Split all non-blank lines at a tab, into the lowercase word and its definition
+def unpack_popdefs(popdefs: str) -> dict[str, str]:
+    """Unpack the game's popdefs syntax to a dictionary
+
+    Args:
+        popdefs (str): The contents of popdefs.txt
+
+    Returns:
+        definitions (dict[str, str]): The parsed popup definitions"""
+
+    # Split all non-blank lines at a tab, into the lowercase word and its definition
     return {l.split("\t")[0].lower() : l.split("\t")[1] for l in popdefs.strip().splitlines() if l}
 
-def pack_popdefs(defs):
-    """Given a dict of definitions, pack into popdefs as text"""
+def pack_popdefs(defs: dict[str, str]) -> str:
+    """Pack a dictionary into the game's popdefs syntax
+
+    Args:
+        defs (dict[str, str]): Dictionary of word: meaning pairs.
+
+    Returns:
+        popdefs (str): The contents of a new popdefs.txt"""
+
     return "\n".join([word.upper() + "\t" + definition for word, definition in defs.items()])
 
-def build_auto_def(word):
-    """Construct a definition line using PyDictionary, given a word"""
-    #Try to get a definition
+def build_auto_def(word: str) -> str | None:
+    """Construct a definition line using PyDictionary
+
+    Args:
+        word (str): The word to define
+
+    Returns:
+        result (str | NoneType): Either a definition for the game to use,
+            or NoneType on faliure."""
+
+    # Try to get a definition
     def_raw = dic.meaning(word, disable_errors = True)
     if not def_raw:
         print("No definition found for", word)
         return None
 
-    for typ in tuple(def_raw.keys()): #For each word type listed...
-        for meaning in def_raw[typ][:]: #For each definition listed in that word type...
-            if meaning[0] == "(": #Remove special context defintions
+    for typ in tuple(def_raw.keys()):  # For each word type listed...
+        for meaning in def_raw[typ][:]:  # For each definition listed in that word type...
+            if meaning[0] == "(":  # Remove special context defintions
                 def_raw[typ].remove(meaning)
-        if not def_raw[typ]: #Remove emptied word type definition lists
+        if not def_raw[typ]:  # Remove emptied word type definition lists
             del def_raw[typ]
 
-    #If all definitions were for special context, report faliure
+    # If all definitions were for special context, report faliure
     if not def_raw:
         print("No appropriate definition found for", word)
         return None
 
-    #Format the first PyDictionary definition for each word type as a BookWorm Deluxe definition string
+    # Format the first PyDictionary definition for each word type as a BookWorm Deluxe definition string
     return "; ".join(["(" + WORD_TYPES[typ] + ") " + defs[0].capitalize() for typ, defs in def_raw.items()])
 
-def is_game_path_valid(path):
-    """Check if the wordlist and popdefs files exist at the given path"""
+def is_game_path_valid(path: str) -> bool:
+    """Check if the wordlist and popdefs files exist at the given path
+
+    Args:
+        path (str): A complete path to a folder, allegedly the game's.
+
+    Returns:
+        valid (bool): If we found the two files."""
+
     dircheck = glob.glob(path + "*")
     return (path + WORDLIST_FILE in dircheck and path + POPDEFS_FILE in dircheck)
 
-def get_word_usage(word):
-    """Given a word, return its average usage"""
+def get_word_usage(word: str) -> float:
+    """Get how often a word is used.
+
+    Args:
+        word (str): The word to check.
+
+    Returns:
+        usage (float): A number ranging from 0 to 8.
+            0 means we had no usage listed.
+            1 is the minimum registered usage."""
+
     return zipf_frequency(word, LANG)
