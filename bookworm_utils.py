@@ -3,13 +3,32 @@
 
 Tools for loading, editing, and saving the wordlist of BookWorm Deluxe
 
+
+The rules for unpacking the dictionary are simple:
+
+    1. Read the number at the start of the line, and copy that many characters
+    from the beginning of the previous word. (If there is no number, copy as
+    many characters as you did last time.)
+
+    2. Append the following letters to the word.
+
+As for the popdefs format, each line is: "WORD\t(part of speech abbreviation)
+definiton; another definition"
+
 This file is part of BookWorm Deluxe Wordlist Editor.
 
-BookWorm Deluxe Wordlist Editor is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+BookWorm Deluxe Wordlist Editor is free software: you can redistribute it
+and/or modify it under the terms of the GNU General Public License as published
+by the Free Software Foundation, either version 3 of the License, or (at your
+option) any later version.
 
-BookWorm Deluxe Wordlist Editor is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+BookWorm Deluxe Wordlist Editor is distributed in the hope that it will be
+useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public
+License for more details.
 
-You should have received a copy of the GNU General Public License along with BookWorm Deluxe Wordlist Editor. If not, see <https://www.gnu.org/licenses/>.
+You should have received a copy of the GNU General Public License along with
+BookWorm Deluxe Wordlist Editor. If not, see <https://www.gnu.org/licenses/>.
 
 S.D.G.
 """
@@ -17,22 +36,32 @@ S.D.G.
 import glob
 import getpass
 import platform
-import regex
-from PyDictionary import PyDictionary as dic
+import warnings
+import nltk
+from nltk.corpus import wordnet
 from wordfreq import zipf_frequency
 
 # Language and charset information
 ALPHABET = "abcdefghijklmnopqrstuvwxyz"
 NUMERIC = "1234567890"
-WORD_TYPES = {  # Word types that PyDictionary may return, and their abbreviations
-    "Noun":"n.",
-    "Verb":"v.",
-    "Adjective":"adj.",
-    "Adverb":"adv.",
-    "Interjection":"int.",
-    "Preposition":"prep.",
-    "Conjugation":"conj."
-        }
+try:
+    WORD_TYPES = {  # Word types that NLTK wordnet may return, and their abbreviations
+        wordnet.NOUN: "n.",
+        wordnet.VERB: "v.",
+        wordnet.ADJ: "adj.",
+        wordnet.ADV: "adv.",
+        # "Interjection": "int.",
+        # "Preposition": "prep.",
+        # "Conjugation": "conj."
+            }
+    HAVE_WORDNET = True
+
+except LookupError:
+    warnings.warn("NLTK corpus wordnet load failed with LookupError.")
+    print("Auto definition will not be available.")
+    WORD_TYPES = None
+    HAVE_WORDNET = False
+
 LANG = "en"  # Language to use when checking word rarity
 RARE_THRESH = 3.5  # Words with usage less than this should probably get definitions
 
@@ -57,14 +86,8 @@ POPDEFS_FILE = "popdefs.txt"
 WORDLIST_ENC = "utf-8"
 POPDEFS_ENC = "iso 8859-15"
 
-"""
-The rules for unpacking the dictionary are simple:
-
-    1. Read the number at the start of the line, and copy that many characters from the beginning of the previous word. (If there is no number, copy as many characters as you did last time.)
-
-    2. Append the following letters to the word.
-"""
-# Popdefs format: WORD\t(word form) definiton; another definition
+# Make sure we have the NLTK corpus wordnet for our English dictionary
+nltk.download("wordnet")
 
 
 def unpack_wordlist(wordlist: str) -> list:
@@ -164,35 +187,32 @@ def pack_popdefs(defs: dict[str, str]) -> str:
 
 
 def build_auto_def(word: str) -> str | None:
-    """Construct a definition line using PyDictionary
+    """Construct a definition line for a word automatically
 
     Args:
         word (str): The word to define
 
     Returns:
-        result (str | NoneType): Either a definition for the game to use,
-            or NoneType on faliure."""
+        result (str): Either a definition for the game to use,
+            or an error message upon faliure.
+        success (bool): Wether or not we succeeded."""
 
-    # Try to get a definition
-    def_raw = dic.meaning(word, disable_errors = True)
-    if not def_raw:
-        print("No definition found for", word)
-        return None
+    if not HAVE_WORDNET:
+        return "We need to download NLTK wordnet for this. " +\
+            "Please connect to the internet, then restart the application.", \
+            False
 
-    for typ in tuple(def_raw.keys()):  # For each word type listed...
-        for meaning in def_raw[typ][:]:  # For each definition listed in that word type...
-            if meaning[0] == "(":  # Remove special context defintions
-                def_raw[typ].remove(meaning)
-        if not def_raw[typ]:  # Remove emptied word type definition lists
-            del def_raw[typ]
+    try:
+        synsets = wordnet.synsets(word)
+    except LookupError:
+        return "LookupError raised. " +\
+            "The NLTK wordnet package is missing.", \
+            False
 
-    # If all definitions were for special context, report faliure
-    if not def_raw:
-        print("No appropriate definition found for", word)
-        return None
+    if not synsets:
+        return f"No definition found for '{word}'", False
 
-    # Format the first PyDictionary definition for each word type as a BookWorm Deluxe definition string
-    return "; ".join(["(" + WORD_TYPES[typ] + ") " + defs[0].capitalize() for typ, defs in def_raw.items()])
+    return "; ".join([f"({WORD_TYPES[ss.pos()]}) {ss.definition().capitalize()}" for ss in synsets]) + ".", True
 
 
 def is_game_path_valid(path: str) -> bool:
