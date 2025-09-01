@@ -66,14 +66,9 @@ The rules for unpacking the dictionary are simple:
 """
 # Popdefs format: WORD\t(word form) definiton; another definition
 
-# Regular Expression to find the numbers at the beginning of all listed words
-COPYCOUNT_PATTERN = regex.compile("(?<=\n|^)[0-9]*")
-
-# Regular Expression to find all the listed word parts minus the numbers
-WORDPART_PATTERN = regex.compile("(?<=\n|[0-9]|^)[a-z]*(?=\n|$)")
 
 def unpack_wordlist(wordlist: str) -> list:
-    """Unpack the games wordlist syntax
+    """Unpack the game's wordlist syntax
 
     Args:
         wordlist (str): The contents of wordlist.txt
@@ -81,31 +76,34 @@ def unpack_wordlist(wordlist: str) -> list:
     Returns:
         words (list): The parsed word list"""
 
-    wordlist = wordlist.strip()
-
     words = []
     copy = 0  # Number of characters to copy from previous word
-    for copystr, wordpart in zip(
-        COPYCOUNT_PATTERN.findall(wordlist),
-        WORDPART_PATTERN.findall(wordlist)):
-
+    for listing in wordlist.strip().splitlines():
         # Skip any blank listings
-        if not wordpart:
+        if not listing:
             continue
 
-        if copystr:  # If there is a new copy count, don't reuse the last one
+        # Parse any numbers at the beginning of the listing as the copy count
+        for i, char in enumerate(listing):
+            if char not in NUMERIC:
+                break  # i is now the index of the first letter in the listing
+
+        copystr = listing[:i]  # set copystr to a string of any numbers at the beginning of the listing
+
+        if copystr:  # If there a new copy count, don't reuse the last one
             copy = int(copystr)
 
         if words:  # Copy from the last word, and add the letters from the listing
-            words.append(words[-1][:copy] + wordpart)
+            words.append(words[-1][:copy] + listing[i:])
 
         elif not copy:  # Do not copy from the last word, but trim off a zero copy count
-            words.append(wordpart)
+            words.append(listing[i:])
 
         else:
-            raise ValueError(f"Copy count is {copy} at the first word but there are no words yet.")
+            raise ValueError("Copy count is {copy} at the first word but there are no words yet.")
 
     return words
+
 
 def pack_wordlist(words: list[str]) -> str:
     """Pack to the game's wordlist syntax
@@ -139,6 +137,7 @@ def pack_wordlist(words: list[str]) -> str:
 
     return "\n".join(listings).strip()
 
+
 def unpack_popdefs(popdefs: str) -> dict[str, str]:
     """Unpack the game's popdefs syntax to a dictionary
 
@@ -151,6 +150,7 @@ def unpack_popdefs(popdefs: str) -> dict[str, str]:
     # Split all non-blank lines at a tab, into the lowercase word and its definition
     return {l.split("\t")[0].lower() : l.split("\t")[1] for l in popdefs.strip().splitlines() if l}
 
+
 def pack_popdefs(defs: dict[str, str]) -> str:
     """Pack a dictionary into the game's popdefs syntax
 
@@ -161,6 +161,7 @@ def pack_popdefs(defs: dict[str, str]) -> str:
         popdefs (str): The contents of a new popdefs.txt"""
 
     return "\n".join([word.upper() + "\t" + definition for word, definition in defs.items()])
+
 
 def build_auto_def(word: str) -> str | None:
     """Construct a definition line using PyDictionary
@@ -193,6 +194,7 @@ def build_auto_def(word: str) -> str | None:
     # Format the first PyDictionary definition for each word type as a BookWorm Deluxe definition string
     return "; ".join(["(" + WORD_TYPES[typ] + ") " + defs[0].capitalize() for typ, defs in def_raw.items()])
 
+
 def is_game_path_valid(path: str) -> bool:
     """Check if the wordlist and popdefs files exist at the given path
 
@@ -204,6 +206,7 @@ def is_game_path_valid(path: str) -> bool:
 
     dircheck = glob.glob(path + "*")
     return (path + WORDLIST_FILE in dircheck and path + POPDEFS_FILE in dircheck)
+
 
 def get_word_usage(word: str) -> float:
     """Get how often a word is used.
