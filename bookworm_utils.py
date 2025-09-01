@@ -17,6 +17,7 @@ S.D.G.
 import glob
 import getpass
 import platform
+import regex
 from PyDictionary import PyDictionary as dic
 from wordfreq import zipf_frequency
 
@@ -44,9 +45,9 @@ SYS_USER = getpass.getuser()
 
 # Get the default game path based on the OS
 GAME_PATH_DEFAULT = {
-    "Linux" : f"/home/{SYS_USER}/.wine/drive_c/Program Files/PopCap Games/BookWorm Deluxe/",
-    "Darwin" : f"/Users/{SYS_USER}/.wine/drive_c/Program Files/PopCap Games/BookWorm Deluxe/",
-    "Windows" : "C:\\Program Files\\PopCap Games\\BookWorm Deluxe\\"
+    "Linux": f"/home/{SYS_USER}/.wine/drive_c/Program Files/PopCap Games/BookWorm Deluxe/",
+    "Darwin": f"/Users/{SYS_USER}/.wine/drive_c/Program Files/PopCap Games/BookWorm Deluxe/",
+    "Windows": "C:\\Program Files\\PopCap Games\\BookWorm Deluxe\\"
     }[platform.system()]
 
 WORDLIST_FILE = "wordlist.txt"
@@ -65,6 +66,12 @@ The rules for unpacking the dictionary are simple:
 """
 # Popdefs format: WORD\t(word form) definiton; another definition
 
+# Regular Expression to find the numbers at the beginning of all listed words
+COPYCOUNT_PATTERN = regex.compile("(?<=\n|^)[0-9]*")
+
+# Regular Expression to find all the listed word parts minus the numbers
+WORDPART_PATTERN = regex.compile("(?<=\n|[0-9]|^)[a-z]*(?=\n|$)")
+
 def unpack_wordlist(wordlist: str) -> list:
     """Unpack the games wordlist syntax
 
@@ -74,31 +81,29 @@ def unpack_wordlist(wordlist: str) -> list:
     Returns:
         words (list): The parsed word list"""
 
+    wordlist = wordlist.strip()
+
     words = []
     copy = 0  # Number of characters to copy from previous word
-    for listing in wordlist.strip().splitlines():
+    for copystr, wordpart in zip(
+        COPYCOUNT_PATTERN.findall(wordlist),
+        WORDPART_PATTERN.findall(wordlist)):
+
         # Skip any blank listings
-        if not listing:
+        if not wordpart:
             continue
 
-        # Parse any numbers at the beginning of the listing as the copy count
-        for i, char in enumerate(listing):
-            if char not in NUMERIC:
-                break  # i is now the index of the first letter in the listing
-
-        copyread = listing[:i]  # set copyread to a string of any numbers at the beginning of the listing
-
-        if copyread:  # If there a new copy count, don't reuse the last one
-            copy = int(copyread)
+        if copystr:  # If there is a new copy count, don't reuse the last one
+            copy = int(copystr)
 
         if words:  # Copy from the last word, and add the letters from the listing
-            words.append(words[-1][:copy] + listing[i:])
+            words.append(words[-1][:copy] + wordpart)
 
         elif not copy:  # Do not copy from the last word, but trim off a zero copy count
-            words.append(listing[i:])
+            words.append(wordpart)
 
         else:
-            raise ValueError("Copy count is {copy} at the first word but there are no words yet.")
+            raise ValueError(f"Copy count is {copy} at the first word but there are no words yet.")
 
     return words
 
