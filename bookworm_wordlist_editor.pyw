@@ -1,13 +1,19 @@
 # !/usr/bin/env python3
 """BookWorm Deluxe Wordlist Editor
 
-A graphical application for editing the word list and popdefs in BookWorm Deluxe.
+An application for editing the word list and popdefs in BookWorm Deluxe.
 
-This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+This program is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation, either version 3 of the License, or (at your option) any later
+version.
 
-This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+This program is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE. See the GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+You should have received a copy of the GNU General Public License along with
+this program. If not, see <https://www.gnu.org/licenses/>.
 
 S.D.G."""
 
@@ -62,12 +68,12 @@ class Editor(Tk):
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
 
         self.title(WINDOW_TITLE)  # Set the window title
-        self.iconphoto(True, PhotoImage(file = ICON_PATH))  # Set the window icon
+        self.iconphoto(True, PhotoImage(file=ICON_PATH))  # Set the window icon
         self.build()
 
         # Load files
         self.game_path = bw.GAME_PATH_DEFAULT
-        self.load_files(select = False, do_or_die = True)
+        self.load_files(select=False, do_or_die=True)
 
         # Start the GUI loop
         self.mainloop()
@@ -112,6 +118,8 @@ class Editor(Tk):
     def build(self):
         """Construct GUI"""
 
+        self.bind("<Control-o>", lambda _: self.load_files(select=True))
+        self.bind("<Control-r>", lambda _: self.load_files(select=False))
         self.bind("<Control-s>", self.save_files)
 
         # Menubar
@@ -120,24 +128,24 @@ class Editor(Tk):
 
         # File menu
         self.file_menu = Menu(self.menubar, tearoff=1)
-        self.file_menu.add_command(label = "Open", command = lambda: self.load_files(select = True))
-        self.file_menu.add_command(label = "Reload", command = lambda: self.load_files(select = False))
-        self.file_menu.add_command(label = "Save", command = self.save_files)
-        self.menubar.add_cascade(label = "File", menu = self.file_menu)
+        self.file_menu.add_command(label="O̲pen", command=lambda: self.load_files(select=True))
+        self.file_menu.add_command(label="R̲eload", command=lambda: self.load_files(select=False))
+        self.file_menu.add_command(label="S̲ave", command=self.save_files)
+        self.menubar.add_cascade(label="File", menu=self.file_menu)
 
         # Edit menu
-        self.edit_menu = Menu(self.menubar, tearoff = 1)
-        self.edit_menu.add_command(label = "Delete orphaned definitions", command = self.del_orphaned_defs)
-        self.edit_menu.add_command(label = "Delete words of invalid length", command = self.del_invalid_len_words)
-        self.edit_menu.add_command(label = "Add several words", command = self.mass_add_words)
-        self.edit_menu.add_command(label = "Delete several words", command = self.mass_delete_words)
+        self.edit_menu = Menu(self.menubar, tearoff=1)
+        self.edit_menu.add_command(label="Delete orphaned definitions", command=self.del_orphaned_defs)
+        self.edit_menu.add_command(label="Delete words of invalid length", command=self.del_invalid_len_words)
+        self.edit_menu.add_command(label="Add several words", command=self.mass_add_words)
+        self.edit_menu.add_command(label="Delete several words", command=self.mass_delete_words)
         self.menubar.add_cascade(label="Edit", menu=self.edit_menu)
 
         # Test menu
-        self.test_menu = Menu(self.menubar, tearoff = 1)
-        self.test_menu.add_command(label = "Disable GUI", command = lambda: self.gui_busy_set(True))
-        self.test_menu.add_command(label = "Enable GUI", command = lambda: self.gui_busy_set(False))
-        # self.menubar.add_cascade(label = "Tests", menu = self.test_menu)  # Uncomment this to enable the test menu
+        self.test_menu = Menu(self.menubar, tearoff=1)
+        self.test_menu.add_command(label="Disable GUI", command=lambda: self.gui_busy_set(True))
+        self.test_menu.add_command(label="Enable GUI", command=lambda: self.gui_busy_set(False))
+        # self.menubar.add_cascade(label="Tests", menu=self.test_menu)  # Uncomment this to enable the test menu
 
         self.menubar_entries = ("File", "Edit")  # Menus to disable when busy
 
@@ -145,114 +153,114 @@ class Editor(Tk):
 
         # Frame for list
         self.list_frame = Frame(self)
-        self.list_frame.grid(row = 0, column = 0, sticky = NSEW)
-        self.rowconfigure(0, weight = 1)
-        self.columnconfigure(0, weight = 1)
+        self.list_frame.grid(row=0, column=0, sticky=NSEW)
+        self.rowconfigure(0, weight=1)
+        self.columnconfigure(0, weight=1)
 
         # Subframe for search system
         self.search_frame=Frame(self.list_frame)
-        self.search_frame.grid(row = 0, columnspan = 2, sticky = NSEW)
+        self.search_frame.grid(row=0, columnspan=2, sticky=NSEW)
 
         # Search system
-        self.search_label = Label(self.search_frame, text = "Search:")
-        self.search_label.grid(row = 0, column = 0, sticky = N + S + W)
+        self.search_label = Label(self.search_frame, text="Search:")
+        self.search_label.grid(row=0, column=0, sticky=N + S + W)
         self.search = StringVar()
         self.search.trace_add("write", self.update_query)
-        self.search_entry = Entry(self.search_frame, textvariable = self.search)
-        self.search_entry.grid(row = 0, column = 1, sticky = NSEW)
-        self.search_frame.columnconfigure(1, weight = 1)
-        self.search_clear_bttn = Button(self.search_frame, text = "X", command = lambda: self.search.set(""))
-        self.search_clear_bttn.grid(row = 0, column = 2, sticky = N + S + E)
+        self.search_entry = Entry(self.search_frame, textvariable=self.search)
+        self.search_entry.grid(row=0, column=1, sticky=NSEW)
+        self.search_frame.columnconfigure(1, weight=1)
+        self.search_clear_bttn = Button(self.search_frame, text="X", command=lambda: self.search.set(""))
+        self.search_clear_bttn.grid(row=0, column=2, sticky=N + S + E)
         self.widgets_to_disable += [self.search_label, self.search_entry, self.search_clear_bttn]
 
-        self.query_list=Variable(value = ["foo", "bar", "bazz"])
-        self.query_box=Listbox(self.list_frame, listvariable = self.query_list, height = 10, selectmode = SINGLE, exportselection = False)
+        self.query_list=Variable(value=["foo", "bar", "bazz"])
+        self.query_box=Listbox(self.list_frame, listvariable=self.query_list, height=10, selectmode=SINGLE, exportselection=False)
         self.query_box.bind('<<ListboxSelect>>', self.selection_updated)
-        self.query_box.grid(row = 1, column = 0, sticky = NSEW)
+        self.query_box.grid(row=1, column=0, sticky=NSEW)
         self.widgets_to_disable.append(self.query_box)
 
-        self.query_box_scrollbar = Scrollbar(self.list_frame, orient = VERTICAL, command = self.query_box.yview)
+        self.query_box_scrollbar = Scrollbar(self.list_frame, orient=VERTICAL, command=self.query_box.yview)
         self.query_box['yscrollcommand'] = self.query_box_scrollbar.set
-        self.query_box_scrollbar.grid(row = 1, column = 1, sticky = N + S + E)
+        self.query_box_scrollbar.grid(row=1, column=1, sticky=N + S + E)
         # self.widgets_to_disable.append(self.query_box_scrollbar)  # Scrollbar cannot be state disabled
-        self.list_frame.rowconfigure(1, weight = 1)
-        self.list_frame.columnconfigure(0, weight = 1)
+        self.list_frame.rowconfigure(1, weight=1)
+        self.list_frame.columnconfigure(0, weight=1)
 
-        self.add_word_bttn = Button(self.list_frame, text = "Add word", command = self.add_word)
-        self.add_word_bttn.grid(row = 2, columnspan = 2, sticky = NSEW)
+        self.add_word_bttn = Button(self.list_frame, text="Add word", command=self.add_word)
+        self.add_word_bttn.grid(row=2, columnspan=2, sticky=NSEW)
         self.widgets_to_disable.append(self.add_word_bttn)
 
         # Frame for word and definition
         self.worddef_frame = Frame(self)
-        self.worddef_frame.grid(row = 0, column = 1, sticky = NSEW)
+        self.worddef_frame.grid(row=0, column=1, sticky=NSEW)
         self.worddef_frame.bind_all("<Key>", self.regulate_def_buttons)
-        self.columnconfigure(1, weight = 1)
+        self.columnconfigure(1, weight=1)
 
         # Subframe for word and usage display
         self.worddisp_frame = Frame(self.worddef_frame)
-        self.worddisp_frame.grid(row = 0, columnspan = 2, sticky = E + W)
-        self.worddef_frame.columnconfigure(0, weight = 1)
-        self.worddef_frame.columnconfigure(1, weight = 1)
+        self.worddisp_frame.grid(row=0, columnspan=2, sticky=E + W)
+        self.worddef_frame.columnconfigure(0, weight=1)
+        self.worddef_frame.columnconfigure(1, weight=1)
 
-        self.word_display = Label(self.worddisp_frame, text = NO_WORD)
-        self.word_display.grid(row = 0, column = 0, sticky = E + W)
+        self.word_display = Label(self.worddisp_frame, text=NO_WORD)
+        self.word_display.grid(row=0, column=0, sticky=E + W)
         self.widgets_to_disable.append(self.word_display)
-        self.worddisp_frame.columnconfigure(0, weight = 1)
+        self.worddisp_frame.columnconfigure(0, weight=1)
 
-        self.usage_display = Label(self.worddisp_frame, text = "")
-        self.usage_display.grid(row = 0, column = 1, sticky = E)
+        self.usage_display = Label(self.worddisp_frame, text="")
+        self.usage_display.grid(row=0, column=1, sticky=E)
         self.widgets_to_disable.append(self.usage_display)
 
-        self.def_field = Text(self.worddef_frame, width = DEFFIELD_SIZE[0], height = DEFFIELD_SIZE[1], wrap = WORD)
-        self.def_field.grid(row = 1, columnspan = 2, sticky = NSEW)
+        self.def_field = Text(self.worddef_frame, width=DEFFIELD_SIZE[0], height=DEFFIELD_SIZE[1], wrap=WORD)
+        self.def_field.grid(row=1, columnspan=2, sticky=NSEW)
         self.widgets_to_disable.append(self.def_field)
-        self.worddef_frame.rowconfigure(1, weight = 1)
-        self.worddef_frame.columnconfigure(0, weight = 1)
-        self.worddef_frame.columnconfigure(1, weight = 1)
+        self.worddef_frame.rowconfigure(1, weight=1)
+        self.worddef_frame.columnconfigure(0, weight=1)
+        self.worddef_frame.columnconfigure(1, weight=1)
 
-        self.reset_def_bttn = Button(self.worddef_frame, text = "Reset definition", command = self.selection_updated)
-        self.reset_def_bttn.grid(row = 2, column = 0, sticky = NSEW)
+        self.reset_def_bttn = Button(self.worddef_frame, text="Reset definition", command=self.selection_updated)
+        self.reset_def_bttn.grid(row=2, column=0, sticky=NSEW)
         self.widgets_to_disable.append(self.reset_def_bttn)
 
-        self.save_def_bttn = Button(self.worddef_frame, text = "Save definition", command = self.update_definition)
-        self.save_def_bttn.grid(row = 2, column = 1, sticky = NSEW)
+        self.save_def_bttn = Button(self.worddef_frame, text="Save definition", command=self.update_definition)
+        self.save_def_bttn.grid(row=2, column=1, sticky=NSEW)
         self.widgets_to_disable.append(self.save_def_bttn)
 
-        self.autodef_bttn = Button(self.worddef_frame, text = "Auto-define", command = self.auto_define)
-        self.autodef_bttn.grid(row = 3, columnspan = 2, sticky = NSEW)
+        self.autodef_bttn = Button(self.worddef_frame, text="Auto-define", command=self.auto_define)
+        self.autodef_bttn.grid(row=3, columnspan=2, sticky=NSEW)
         self.widgets_to_disable.append(self.autodef_bttn)
 
-        self.del_bttn = Button(self.worddef_frame, text = "Delete word", command = self.del_word)
-        self.del_bttn.grid(row = 4, columnspan = 2, sticky = NSEW)
+        self.del_bttn = Button(self.worddef_frame, text="Delete word", command=self.del_word)
+        self.del_bttn.grid(row=4, columnspan=2, sticky=NSEW)
         self.widgets_to_disable.append(self.del_bttn)
 
         # Busy text that goes over everything
         self.busy_text = StringVar(self)
-        self.busy_label = Label(self, textvariable = self.busy_text)
-        self.busy_label.grid(row = 0, column = 0, columnspan = 2)
+        self.busy_label = Label(self, textvariable=self.busy_text)
+        self.busy_label.grid(row=0, column=0, columnspan=2)
 
-    def thread_process(self, method: callable, message: str = "Working..."):
+    def thread_process(self, method: callable, message: str="Working..."):
         """Run a method in a thread, and grey out the GUI until it's finished.
 
         Args:
             method (callable): The method to run in a thread.
             message (str): The message to show over the greyed out GUI."""
 
-        self.thread = threading.Thread(target = lambda: self.__busy_run(method, message), daemon = True)
+        self.thread = threading.Thread(target=lambda: self.__busy_run(method, message), daemon=True)
         self.thread.start()
 
-    def __busy_run(self, method: callable, message: str = "Working.."):
+    def __busy_run(self, method: callable, message: str="Working.."):
         """Run a method, and grey out the GUI until it's finished.
 
         Args:
             method (callable): The method to run.
             message (str): The message to show over the greyed out GUI."""
 
-        self.gui_busy_set(True, message = message)
+        self.gui_busy_set(True, message=message)
         method()
         self.gui_busy_set(False)
 
-    def gui_busy_set(self, busy_status: bool, message: str = "Working..."):
+    def gui_busy_set(self, busy_status: bool, message: str="Working..."):
         """Set the GUI to busy or not busy
 
         Args:
@@ -268,9 +276,9 @@ class Editor(Tk):
 
         new_state = (NORMAL, DISABLED)[int(busy_status)]
         for entry in self.menubar_entries:
-            self.menubar.entryconfig(entry, state = new_state)
+            self.menubar.entryconfig(entry, state=new_state)
         for widget in self.widgets_to_disable:
-            widget.config(state = new_state)
+            widget.config(state=new_state)
 
         # For other widget disablers to reference
         self.busy_status = busy_status
@@ -295,7 +303,7 @@ class Editor(Tk):
         new_state = (NORMAL, DISABLED)[int(self.selected_word == NO_WORD)]
 
         for button in (self.autodef_bttn, self.del_bttn):
-            button.config(state = new_state)
+            button.config(state=new_state)
 
     def regulate_def_buttons(self, *args):
         """Check if the definition has changed, and dis/en-able the reset and save buttons accordingly.
@@ -334,9 +342,9 @@ class Editor(Tk):
             new_state = DISABLED
 
         for button in (self.reset_def_bttn, self.save_def_bttn):
-            button.config(state = new_state)
+            button.config(state=new_state)
 
-    def load_files(self, select: bool = True, do_or_die: bool = False):
+    def load_files(self, select: bool=True, do_or_die: bool=False):
         """Load the wordlist and the popdefs (threaded)
 
         Args:
@@ -345,9 +353,9 @@ class Editor(Tk):
             do_or_die(bool): Wether or not cancelling is not an option.
                 Defaults to False, cancelling is an option."""
 
-        self.thread_process(lambda: self.__load_files(select, do_or_die), message = "Loading...")
+        self.thread_process(lambda: self.__load_files(select, do_or_die), message="Loading...")
 
-    def __load_files(self, select: bool = True, do_or_die: bool = False):
+    def __load_files(self, select: bool=True, do_or_die: bool=False):
         """Load the wordlist and the popdefs
 
         Args:
@@ -362,7 +370,7 @@ class Editor(Tk):
         # While we need to select something
         while select:
             while True:  # Keep asking for an input
-                response = filedialog.askdirectory(title = "Game directory", initialdir = self.game_path)
+                response = filedialog.askdirectory(title="Game directory", initialdir=self.game_path)
                 if response:
                     break  # We got a response, so break the loop
 
@@ -380,11 +388,11 @@ class Editor(Tk):
                 self.game_path = response + os.sep  # We got a new valid directory
 
         # First, load the wordlist
-        with open(op.join(self.game_path, bw.WORDLIST_FILE), encoding = bw.WORDLIST_ENC) as f:
+        with open(op.join(self.game_path, bw.WORDLIST_FILE), encoding=bw.WORDLIST_ENC) as f:
             self.words = bw.unpack_wordlist(f.read().strip())
 
         # Then, load the popdefs
-        with open(op.join(self.game_path, bw.POPDEFS_FILE), encoding = bw.POPDEFS_ENC) as f:
+        with open(op.join(self.game_path, bw.POPDEFS_FILE), encoding=bw.POPDEFS_ENC) as f:
             self.defs = bw.unpack_popdefs(f.read().strip())
 
         # Update the query list
@@ -393,7 +401,7 @@ class Editor(Tk):
         # The files were just (re)loaded, so there are no unsaved changes
         self.unsaved_changes = False
 
-    def save_files(self, *args, backup = False):
+    def save_files(self, *args, backup=False):
         """Save the worldist and popdefs
 
         Args:
@@ -412,11 +420,11 @@ class Editor(Tk):
                 mb.showerror("Backup failed", "Could not back up the original files because they have disappeared.")
 
         # First, save the wordlist
-        with open(op.join(self.game_path, bw.WORDLIST_FILE), "w", encoding = bw.WORDLIST_ENC) as f:
+        with open(op.join(self.game_path, bw.WORDLIST_FILE), "w", encoding=bw.WORDLIST_ENC) as f:
             f.write(bw.pack_wordlist(self.words))
 
         # Then, save the popdefs
-        with open(op.join(self.game_path, bw.POPDEFS_FILE), "w", encoding = bw.POPDEFS_ENC) as f:
+        with open(op.join(self.game_path, bw.POPDEFS_FILE), "w", encoding=bw.POPDEFS_ENC) as f:
             f.write(bw.pack_popdefs(self.defs))
 
         self.unsaved_changes = False  # All changes are now saved
@@ -429,18 +437,18 @@ class Editor(Tk):
         # Update what word is selected
         self.selected_word = self.get_selected_word()
 
-        self.word_display.config(text = self.selected_word)  # Display the current word
+        self.word_display.config(text=self.selected_word)  # Display the current word
         self.load_definition()  # Load and display the current definition
 
         # If no word is selected, clear the usage statistic display
         if self.selected_word == NO_WORD:
-            self.usage_display.config(text = "")
+            self.usage_display.config(text="")
 
         # Otherwise, try to load and display usage statistics
         else:
             try:
                 usage = bw.get_word_usage(self.selected_word)
-                self.usage_display.config(text = WORDFREQ_DISP_PREFIX + str(usage), fg = RARE_COLS[int(usage < bw.RARE_THRESH)])
+                self.usage_display.config(text=WORDFREQ_DISP_PREFIX + str(usage), fg=RARE_COLS[int(usage < bw.RARE_THRESH)])
             except LookupError:
                 print("Usage lookup faliure. See issue  # 5.")
 
@@ -461,7 +469,7 @@ class Editor(Tk):
         if search:
             query = [word for word in self.words if search in word]
             # Sort search results by how close the search query is to the beginning
-            query.sort(key = lambda x: x.index(search))
+            query.sort(key=lambda x: x.index(search))
 
         # The search was cleared
         else:
@@ -545,7 +553,7 @@ class Editor(Tk):
         # Disable definition reset and save buttons now that the definition was saved
         self.regulate_def_buttons()
 
-    def is_len_valid(self, word: str, notify: bool = False) -> bool:
+    def is_len_valid(self, word: str, notify: bool=False) -> bool:
         """Check if a word's length is valid.
 
         Args:
@@ -568,7 +576,7 @@ class Editor(Tk):
         new = dialog.askstring("New word", "Enter the new word to add:")
 
         # Allow the user to cancel, and also ensure the word is of allowed length
-        if not new or not self.is_len_valid(new, notify = True):
+        if not new or not self.is_len_valid(new, notify=True):
             return
         new = new.lower()
 
@@ -605,7 +613,7 @@ class Editor(Tk):
         """Add a whole file's worth of words"""
 
         # Open and read a file with a human-readable list of new words
-        f = filedialog.askopenfile(title = "Select human-readable list of words", filetypes = [("Plain text", "*.txt")])
+        f = filedialog.askopenfile(title="Select human-readable list of words", filetypes=[("Plain text", "*.txt")])
 
         # The user cancelled via the open file dialog
         if not f:
@@ -678,7 +686,7 @@ class Editor(Tk):
     def __mass_delete_words(self):
         """Delete a whole file's worth of words"""
 
-        f = filedialog.askopenfile(title = "Select human-readable list of words", filetypes = [("Plain text", "*.txt")])
+        f = filedialog.askopenfile(title="Select human-readable list of words", filetypes=[("Plain text", "*.txt")])
         if not f:  # The user cancelled
             return
         text = f.read().strip()
@@ -793,14 +801,14 @@ class Editor(Tk):
         if word == NO_WORD:
             return
 
-        definition = bw.build_auto_def(word)
-        if not definition:
-            mb.showerror("Could not autodefine", f"No useful definition returned from PyDictionary for {word}")
+        result, success = bw.build_auto_def(word)
+        if not success:
+            mb.showerror("Could not autodefine", result)
             return
 
         # Write out the auto-definition, but do not save
         self.def_field.delete(0.0, END)
-        self.def_field.insert(0.0, definition)
+        self.def_field.insert(0.0, result)
 
         # Enable or disable the definition handler buttons accordingly
         self.regulate_def_buttons()
