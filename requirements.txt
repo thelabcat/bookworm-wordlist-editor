@@ -1,2 +1,2 @@
-PyDictionary
+nltk
 wordfreq
