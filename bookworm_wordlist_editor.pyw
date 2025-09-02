@@ -720,8 +720,9 @@ class Editor(Tk):
         text = f.read().strip().lower()
         f.close()
 
+        # Filter text to alphabet and whitespace
         self.busy_text = "Filtering to alphabet only..."
-        alpha_text = "".join((c for c in text if c.isalpha() or c.isspace()))  # Filter text to alphabet and whitespace
+        alpha_text = "".join((c for c in text if c.isalpha() or c.isspace()))
         if not alpha_text:
             mb.showerror("Invalid file", "File did not contain any alphabetic text.")
             return
@@ -848,7 +849,7 @@ class Editor(Tk):
 
     def mass_auto_define(self):
         """Find all words below the usage threshold and try to define them (threaded)"""
-        self.thread_process(self.__mass_auto_define, message = "Working...")
+        self.thread_process(self.__mass_auto_define, message="Working...")
 
     def __mass_auto_define(self):
         """Find all words below the usage threshold and try to define them"""
@@ -896,6 +897,7 @@ class Editor(Tk):
 
         if mb.askyesno("Operation complete", f"Auto-defined {total - fails} words. Save changes to disk now?"):
             self.save_files()
+
 
 # Create an editor window
 if __name__ == "__main__":

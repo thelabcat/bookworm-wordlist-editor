@@ -65,9 +65,11 @@ except LookupError:
     HAVE_WORDNET = False
 
 LANG = "en"  # Language to use when checking word rarity
-RARE_THRESH = 3.5  # Words with usage less than this should probably get definitions
 
-# BookWorm Deluxe's internal word length delimiters'
+# Words with usage less than this should probably get definitions
+RARE_THRESH = 3.5
+
+# BookWorm Deluxe's internal word length delimiters
 WORD_LENGTH_MIN = 3
 WORD_LENGTH_MAX = 12
 
@@ -113,15 +115,18 @@ def unpack_wordlist(wordlist: str) -> list:
             if char not in NUMERIC:
                 break  # i is now the index of the first letter in the listing
 
-        copystr = listing[:i]  # set copystr to a string of any numbers at the beginning of the listing
+        # set copystr to a string of any numbers at the beginning of the listing
+        copystr = listing[:i]
 
-        if copystr:  # If there a new copy count, don't reuse the last one
+        if copystr:  # If there is a new copy count, don't reuse the last one
             copy = int(copystr)
 
-        if words:  # Copy from the last word, and add the letters from the listing
+        # Copy from the last word, and add the letters from the listing?
+        if words:
             words.append(words[-1][:copy] + listing[i:])
 
-        elif not copy:  # Do not copy from the last word, but trim off a zero copy count
+        # Do not copy from the last word, but trim off a zero copy count?
+        elif not copy:
             words.append(listing[i:])
 
         else:
@@ -139,10 +144,15 @@ def pack_wordlist(words: list[str]) -> str:
     Returns:
         wordlist (str): The contents of a new wordlist.txt"""
 
+    # Each packed word listing in the new file
     listings = []
-    oldcopy = 0  # The previous number of letters copied from the word(s) before the current word
+
+    # The previous number of letters copied from the word(s) before the current word
+    oldcopy = 0
+
     for i, new_word in enumerate(words):
-        if i == 0:  # The first word cannot possibly copy anything, and should be listed whole
+        # The first word cannot possibly copy anything, and should be listed whole
+        if i == 0:
             listings.append(new_word)
             old_word = new_word
             continue
@@ -150,7 +160,8 @@ def pack_wordlist(words: list[str]) -> str:
         # Compare the new word with the old one, one letter at a time,
         # only going to the end of the shortest of the two words
         for copy, letters in enumerate(zip(old_word, new_word)):
-            if letters[0] != letters[1]:  # Compare the two letters at the same position from each word
+            # Compare the two letters at the same position from each word
+            if letters[0] != letters[1]:
                 # copy is now set to the index of the first letter the new word does not have in common with the old one
                 break
 
@@ -173,7 +184,7 @@ def unpack_popdefs(popdefs: str) -> dict[str, str]:
         definitions (dict[str, str]): The parsed popup definitions"""
 
     # Split all non-blank lines at a tab, into the lowercase word and its definition
-    return {l.split("\t")[0].lower() : l.split("\t")[1] for l in popdefs.strip().splitlines() if l}
+    return {line.split("\t")[0].lower(): line.split("\t")[1] for line in popdefs.strip().splitlines() if line}
 
 
 def pack_popdefs(defs: dict[str, str]) -> str:
