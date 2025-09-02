@@ -33,6 +33,7 @@ BookWorm Deluxe Wordlist Editor. If not, see <https://www.gnu.org/licenses/>.
 S.D.G.
 """
 
+import bisect
 import glob
 import getpass
 import platform
@@ -259,3 +260,19 @@ def get_word_usage(word: str) -> float:
             1 is the minimum registered usage."""
 
     return zipf_frequency(word, LANG)
+
+
+def binary_search(elements, value):
+    """A binary search implementation from W3Schools
+
+    Args:
+        elements (iter): The sorted iterable to search through
+        value (object): The value to get the index of
+
+    Returns:
+        result (int|None): The index, or NoneType if not found
+    """
+
+    index = bisect.bisect_left(elements, value)
+    if index < len(elements) and elements[index] == value:
+        return index

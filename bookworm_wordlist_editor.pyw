@@ -61,7 +61,9 @@ class Editor(Tk):
 
         self.thread = None  # Any thread the GUI might spawn
 
-        self.busy_status = False  # Is the GUI currently busy (all widgets disabled)?
+        self.__busy = False  # Is the GUI currently busy (all widgets disabled)?
+
+        self.__busy_text = ""  # Current operations message
 
         # Handle unsaved changes
         self.__unsaved_changes = False
@@ -235,8 +237,8 @@ class Editor(Tk):
         self.widgets_to_disable.append(self.del_bttn)
 
         # Busy text that goes over everything
-        self.busy_text = StringVar(self)
-        self.busy_label = Label(self, textvariable=self.busy_text)
+        self.busy_displaytext = StringVar(self)
+        self.busy_label = Label(self, textvariable=self.busy_displaytext)
         self.busy_label.grid(row=0, column=0, columnspan=2)
 
     def thread_process(self, method: callable, message: str = "Working..."):
@@ -256,35 +258,50 @@ class Editor(Tk):
             method (callable): The method to run.
             message (str): The message to show over the greyed out GUI."""
 
-        self.gui_busy_set(True, message=message)
+        self.busy_text = message
+        self.busy = True
         method()
-        self.gui_busy_set(False)
+        self.busy = False
 
-    def gui_busy_set(self, busy_status: bool, message: str = "Working..."):
-        """Set the GUI to busy or not busy
+    @property
+    def busy(self) -> bool:
+        """Wether or not the program is busy"""
+        return self.__busy
 
-        Args:
-            busy_status (bool): Wether or not we are busy.
-            message (str): The message to show over the greyed out GUI."""
+    @busy.setter
+    def busy(self, new: bool):
+        """Wether or not the program is busy"""
+        # For other widget disablers to reference
+        self.__busy = new
 
-        if busy_status:
-            self.busy_text.set(message)
+        if new:
+            self.busy_displaytext.set(self.busy_text)
             self.busy_label.lift()
         else:
-            self.busy_text.set("")
+            self.busy_displaytext.set("")
             self.busy_label.lower()
 
-        new_state = (NORMAL, DISABLED)[int(busy_status)]
+        new_state = (NORMAL, DISABLED)[int(new)]
         for entry in self.menubar_entries:
             self.menubar.entryconfig(entry, state=new_state)
         for widget in self.widgets_to_disable:
             widget.config(state=new_state)
 
-        # For other widget disablers to reference
-        self.busy_status = busy_status
-
         # Rerun any unique widget disablers
         self.unique_disable_handlers()
+
+    @property
+    def busy_text(self):
+        """Current operations message"""
+        return self.__busy_text
+
+    @busy_text.setter
+    def busy_text(self, new: str):
+        """Current operations message"""
+        self.__busy_text = new
+        # If we are currently busy, display the new message
+        if self.busy_status:
+            self.busy_displaytext.set(new)
 
     def unique_disable_handlers(self):
         """Run all unique widget disabling handlers"""
@@ -388,14 +405,17 @@ class Editor(Tk):
                 self.game_path = response + os.sep  # We got a new valid directory
 
         # First, load the wordlist
+        self.busy_text = f"Loading {bw.WORDLIST_FILE}..."
         with open(op.join(self.game_path, bw.WORDLIST_FILE), encoding=bw.WORDLIST_ENC) as f:
             self.words = bw.unpack_wordlist(f.read().strip())
 
         # Then, load the popdefs
+        self.busy_text = f"Loading {bw.POPDEFS_FILE}..."
         with open(op.join(self.game_path, bw.POPDEFS_FILE), encoding=bw.POPDEFS_ENC) as f:
             self.defs = bw.unpack_popdefs(f.read().strip())
 
         # Update the query list
+        self.busy_text = "Updating display..."
         self.update_query()
 
         # The files were just (re)loaded, so there are no unsaved changes
@@ -620,11 +640,12 @@ class Editor(Tk):
             return
 
         # Read and close the file
-        text = f.read().strip()
+        text = f.read().strip().lower()
         f.close()
 
         # filter file to only letters and spaces
-        alpha_text = "".join([c for c in text if c.lower() in bw.ALPHABET or c.isspace()])
+        self.busy_text = "Filtering to alphabet only..."
+        alpha_text = "".join((c for c in text if c.isalpha() or c.isspace()))
 
         # There was no text besides non-alpha symbols
         if not alpha_text:
@@ -632,7 +653,7 @@ class Editor(Tk):
             return
 
         # Get all words, delimited by whitespace, in lowercase
-        add_words = [word.strip().lower() for word in alpha_text.split()]
+        add_words = alpha_text.split()
 
         # There were no words
         if not add_words:
@@ -640,10 +661,11 @@ class Editor(Tk):
             return
 
         # Filter to words we do not already have
-        new_words = [word for word in add_words if word not in self.words]  # Filter words to ones we don't have yet
+        self.busy_text = "Filtering to only new words..."
+        new_words = [word for word in add_words if bw.binary_search(self.words, word) is None]
         already_have = len(add_words) - len(new_words)
 
-        # There were no words that we didn't already have'
+        # There were no words that we didn't already have
         if not new_words:
             mb.showinfo("Already have all words", f"All {len(add_words)} words are already in the word list.")
             return
@@ -653,6 +675,7 @@ class Editor(Tk):
             mb.showinfo("Already have some words", f"{already_have} words are already in the word list.")
 
         # Filter to words of valid lengths
+        self.busy_text = "Filtering out invalid length words..."
         new_lenvalid_words = [word for word in new_words if self.is_len_valid(word)]
         len_invalid = len(new_words) - len(new_lenvalid_words)
 
@@ -666,6 +689,7 @@ class Editor(Tk):
             mb.showinfo("Some invalid word lengths", f"{len_invalid} words were rejected because they were not between {bw.WORD_LENGTH_MIN} and {bw.WORD_LENGTH_MAX} letters long.")
 
         # Add the new words
+        self.busy_text = "Combining lists..."
         self.words += new_lenvalid_words
         self.words.sort()
 
@@ -689,20 +713,22 @@ class Editor(Tk):
         f = filedialog.askopenfile(title="Select human-readable list of words", filetypes=[("Plain text", "*.txt")])
         if not f:  # The user cancelled
             return
-        text = f.read().strip()
+        text = f.read().strip().lower()
         f.close()
 
-        alpha_text = "".join([c for c in text if c.lower() in bw.ALPHABET or c.isspace()])  # Filter text to alphabet and whitespace
+        self.busy_text = "Filtering to alphabet only..."
+        alpha_text = "".join((c for c in text if c.isalpha() or c.isspace()))  # Filter text to alphabet and whitespace
         if not alpha_text:
             mb.showerror("Invalid file", "File did not contain any alphabetic text.")
             return
 
-        del_words = [word.strip().lower() for word in alpha_text.split()]  # Get all words, delimited by whitespace, in lowercase
+        del_words = alpha_text.split()  # Get all words, delimited by whitespace, in lowercase
         if not del_words:
             mb.showerror("Invalid file", "Did not find any words in file.")
             return
 
-        old_words = [word for word in del_words if word in self.words]  # Filter words to ones we do have
+        self.busy_text = "Finding words we do have..."
+        old_words = [word for word in del_words if bw.binary_search(self.words, word) is not None]  # Filter words to ones we do have
         dont_have = len(del_words) - len(old_words)
         if not old_words:
             mb.showinfo("Don't have any of the words", f"None of the {len(del_words)} words are in the word list.")
@@ -711,6 +737,7 @@ class Editor(Tk):
         if dont_have:
             mb.showinfo("Don't have some words", f"{dont_have} of the words are not in the wordlist.")
 
+        self.busy_text = "Deleting..."
         for word in old_words:
             self.words.remove(word)
 
@@ -776,7 +803,8 @@ class Editor(Tk):
     def __del_orphaned_defs(self):
         """Find and delete any orphaned definitions"""
 
-        orphaned = [word for word in self.defs.keys() if word not in self.words]
+        self.busy_text = "Finding orphaned definitions..."
+        orphaned = [word for word in self.defs if bw.binary_search(self.words, word) is None]
 
         # No orphaned definitions found
         if not orphaned:
@@ -784,6 +812,7 @@ class Editor(Tk):
             return
 
         # Delete the orphaned definitions
+        self.busy_text = "Deleting orphans..."
         for o in orphaned:
             del self.defs[o]
 
@@ -812,6 +841,7 @@ class Editor(Tk):
 
         # Enable or disable the definition handler buttons accordingly
         self.regulate_def_buttons()
+
 
 # Create an editor window
 if __name__ == "__main__":
