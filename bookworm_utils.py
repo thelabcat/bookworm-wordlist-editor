@@ -184,7 +184,7 @@ def pack_popdefs(defs: dict[str, str]) -> str:
     Returns:
         popdefs (str): The contents of a new popdefs.txt"""
 
-    return "\n".join([word.upper() + "\t" + definition for word, definition in defs.items()])
+    return "\n".join([word.upper() + "\t" + definition for word, definition in sorted(defs.items())])
 
 
 def build_auto_def(word: str) -> str | None:
