@@ -263,7 +263,7 @@ def get_word_usage(word: str) -> float:
 
 
 def binary_search(elements, value):
-    """A binary search implementation from W3Schools
+    """A binary search implementation by Bartosz Zaczyński <https://realpython.com/>
 
     Args:
         elements (iter): The sorted iterable to search through
