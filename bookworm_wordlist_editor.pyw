@@ -141,6 +141,7 @@ class Editor(Tk):
         self.edit_menu.add_command(label="Delete words of invalid length", command=self.del_invalid_len_words)
         self.edit_menu.add_command(label="Add several words", command=self.mass_add_words)
         self.edit_menu.add_command(label="Delete several words", command=self.mass_delete_words)
+        self.edit_menu.add_command(label="Auto-define undefined rare words", command=self.mass_auto_define)
         self.menubar.add_cascade(label="Edit", menu=self.edit_menu)
 
         # Test menu
@@ -263,6 +264,9 @@ class Editor(Tk):
         method()
         self.busy = False
 
+        # If the current selected word was auto-defined, we want to show its new definitoon
+        self.selection_updated()
+
     @property
     def busy(self) -> bool:
         """Wether or not the program is busy"""
@@ -337,7 +341,7 @@ class Editor(Tk):
             new_state = DISABLED
 
         # We have an old definition for this word
-        elif self.selected_word in self.defs.keys():
+        elif self.selected_word in self.defs:
             # The user deleted the old definition
             if not def_entry:
                 new_state = NORMAL
@@ -545,7 +549,7 @@ class Editor(Tk):
         self.def_field.delete(0.0, END)
 
         # If we have a definition for this word, display it
-        if self.selected_word != NO_WORD and self.selected_word in self.defs.keys():
+        if self.selected_word != NO_WORD and self.selected_word in self.defs:
             self.def_field.insert(0.0, self.defs[self.selected_word])
 
         # Disable definition reset and save buttons now that a definition was (re)loaded
@@ -824,7 +828,7 @@ class Editor(Tk):
             self.save_files()
 
     def auto_define(self):
-        """Pull a definition from the web and show it"""
+        """Attempt to automatically define the currently selected word"""
 
         word = self.selected_word
         if word == NO_WORD:
@@ -842,6 +846,56 @@ class Editor(Tk):
         # Enable or disable the definition handler buttons accordingly
         self.regulate_def_buttons()
 
+    def mass_auto_define(self):
+        """Find all words below the usage threshold and try to define them (threaded)"""
+        self.thread_process(self.__mass_auto_define, message = "Working...")
+
+    def __mass_auto_define(self):
+        """Find all words below the usage threshold and try to define them"""
+
+        if not bw.HAVE_WORDNET:
+            mb.showerror("No dictionary", "We need the NLTK corpus wordnet English dictionary for auto-defining. Please connect to the internet, then restart the application.")
+            return
+
+        # Find all words below the usage threshold and without a definition
+        self.busy_text = "Finding undefined rare words..."
+        defined_words = tuple(self.defs.keys())
+        words_to_define = [word for word in self.words if bw.get_word_usage(word) < bw.RARE_THRESH and bw.binary_search(defined_words, word) is None]
+        total = len(words_to_define)
+
+        # Nothing to do?
+        if not total:
+            mb.showinfo("No undefined rare words", "All words with a usage metric below the threshold already have a popdef.")
+            return
+
+        # Attempt to define all the words
+        self.busy_text = f"Auto-defining {total} words..."
+        fails = 0
+        for word in words_to_define:
+            result, success = bw.build_auto_def(word)
+            if success:
+                self.defs[word] = result
+            else:
+                fails += 1
+
+        self.busy_text = "Sorting popdefs..."
+        self.defs = dict(sorted(self.defs.items()))
+
+        if fails == total:
+            mb.showerror("No definitions found", f"Failed to define any of the {total} undefined rare words found.")
+            return
+
+        elif fails:
+            mb.showwarning("Some definitions not found", f"Failed to define {fails} of the {total} undefined rare words found.")
+
+        else:
+            mb.showinfo("All rare words defined", f"Found and successfully auto-defined {total} previously undefined rare words.")
+
+        # There are now unsaved changes
+        self.unsaved_changes = True
+
+        if mb.askyesno("Operation complete", f"Auto-defined {total - fails} words. Save changes to disk now?"):
+            self.save_files()
 
 # Create an editor window
 if __name__ == "__main__":

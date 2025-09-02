@@ -33,6 +33,7 @@ To run from source, install Python 3.x, and then the dependencies, then use Pyth
     - Delete words of invalid length: Removes words that BookWorm Deluxe will not allow as moves because of their length.
     - Add several words: Select a text file of new words and add them all.
     - Delete several words: Select a text file of words and delete them all.
+    - Auto-define undefined rare words: Find all words below my arbitrary usage threshold and attempt to auto-define them.
 
 ## Information on antivirus false positives for PyInstaller executables
 
