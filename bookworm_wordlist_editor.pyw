@@ -304,7 +304,7 @@ class Editor(Tk):
         """Current operations message"""
         self.__busy_text = new
         # If we are currently busy, display the new message
-        if self.busy_status:
+        if self.busy:
             self.busy_displaytext.set(new)
 
     def unique_disable_handlers(self):
@@ -317,7 +317,7 @@ class Editor(Tk):
         """Enable or disable the word handling buttons based on if a word is selected"""
 
         # Do not enable or disable these widgets if the GUI is busy
-        if self.busy_status:
+        if self.busy:
             return
 
         # buttons should be disabled if no word is selected
@@ -331,7 +331,7 @@ class Editor(Tk):
         Includes dummy argument sink."""
 
         # Do not enable or disable these widgets if the GUI is busy
-        if self.busy_status:
+        if self.busy:
             return
 
         def_entry = self.def_field.get("0.0", END).strip()  # Get the current entry
@@ -885,7 +885,7 @@ class Editor(Tk):
             mb.showerror("No definitions found", f"Failed to define any of the {total} undefined rare words found.")
             return
 
-        elif fails:
+        if fails:
             mb.showwarning("Some definitions not found", f"Failed to define {fails} of the {total} undefined rare words found.")
 
         else:
