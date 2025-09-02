@@ -15,12 +15,12 @@ You can find executables with bundled Python and the dependencies in the Release
 To run from source, install Python 3.x, and then the dependencies, then use Python to run the .pyw program.
 
 ### Program operation:
-- For the auto-define button to work, the program requires an internet connection to download the NLTK corpus wordnet package when it starts up for the first time. If it doesn't have one, it will still function mostly-normally, but the button will just show an error message. It will try to download wordnet again on the next startup.
+- For the auto-define button to work, the program requires an internet connection to download the NLTK wordnet package when it starts up for the first time. If it doesn't have one, it will still function mostly-normally, but the button will just show an error message. It will try to download wordnet again on the next startup.
 - When the program opens, it will default to opening the BookWorm Deluxe folder in the expected system location per your platform. If on Linux or MacOS, it will assume the default wine prefix. If it does not find the wordlist.txt and popdefs.txt files in this default location or the default location doesn't exist, it will ask you to choose the BookWorm Deluxe folder manually. After it loads, you should see a list of words in the left pane.
 - Select a word to see its usage frequency according to wordfreq, and its current popdef (blank for no popdef). If the usage frequency is below an arbitrary value where I think it might need a popdef, it will show in red. Otherwise, it will show in black. While a word is selected you can:
     - Edit the popdef and save it. Note that if you select a different word before saving the definition, it will reset.
     - Reset the popdef to what it was the last time you saved it.
-    - Auto-create a popdef using the NLTK corpus wordnet English dictionary.
+    - Auto-create a popdef using the NLTK wordnet English dictionary.
     - Delete the word from the wordlist.
 - You can search for a word with the search box, using the X button to clear the search query.
 - You can add a new word to the wordlist with the Add word button. Once added, it will become selected.

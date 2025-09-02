@@ -59,7 +59,7 @@ try:
     HAVE_WORDNET = True
 
 except LookupError:
-    warnings.warn("NLTK corpus wordnet load failed with LookupError.")
+    warnings.warn("NLTK wordnet load failed with LookupError.")
     print("Auto definition will not be available.")
     WORD_TYPES = None
     HAVE_WORDNET = False
@@ -88,7 +88,7 @@ POPDEFS_FILE = "popdefs.txt"
 WORDLIST_ENC = "utf-8"
 POPDEFS_ENC = "iso 8859-15"
 
-# Make sure we have the NLTK corpus wordnet for our English dictionary
+# Make sure we have the NLTK wordnet for our English dictionary
 nltk.download("wordnet")
 
 

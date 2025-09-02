@@ -854,7 +854,7 @@ class Editor(Tk):
         """Find all words below the usage threshold and try to define them"""
 
         if not bw.HAVE_WORDNET:
-            mb.showerror("No dictionary", "We need the NLTK corpus wordnet English dictionary for auto-defining. Please connect to the internet, then restart the application.")
+            mb.showerror("No dictionary", "We need the NLTK wordnet English dictionary for auto-defining. Please connect to the internet, then restart the application.")
             return
 
         # Find all words below the usage threshold and without a definition
