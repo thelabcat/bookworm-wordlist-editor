@@ -212,7 +212,26 @@ def build_auto_def(word: str) -> str | None:
     if not synsets:
         return f"No definition found for '{word}'", False
 
-    return "; ".join([f"({WORD_TYPES[ss.pos()]}) {ss.definition().capitalize()}" for ss in synsets]) + ".", True
+    # Group definitions together by word type
+    pos_groups = {}
+    for ss in synsets:
+        if (pos := ss.pos()) not in pos_groups:
+            pos_groups[pos] = [ss.definition()]
+        else:
+            pos_groups[pos].append(ss.definition())
+
+    return "; ".join(  # type groups are split by semicolon
+        f"({WORD_TYPES[pos]}) " +  # Each type group starts with the type
+
+        # Definitions within a group are also split by semicolon
+        # Each definition should also be capitalized
+        "; ".join((d.capitalize() for d in definitions))
+
+        # Iterate through type groups with the definitions in them
+        for pos, definitions in pos_groups.items()
+        # The last definition needs a period.
+        ) + ".", \
+        True  # Report success
 
 
 def is_game_path_valid(path: str) -> bool:
