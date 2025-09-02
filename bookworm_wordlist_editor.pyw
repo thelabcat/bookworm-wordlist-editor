@@ -239,7 +239,7 @@ class Editor(Tk):
         self.busy_label = Label(self, textvariable=self.busy_text)
         self.busy_label.grid(row=0, column=0, columnspan=2)
 
-    def thread_process(self, method: callable, message: str="Working..."):
+    def thread_process(self, method: callable, message: str = "Working..."):
         """Run a method in a thread, and grey out the GUI until it's finished.
 
         Args:
@@ -249,7 +249,7 @@ class Editor(Tk):
         self.thread = threading.Thread(target=lambda: self.__busy_run(method, message), daemon=True)
         self.thread.start()
 
-    def __busy_run(self, method: callable, message: str="Working.."):
+    def __busy_run(self, method: callable, message: str = "Working.."):
         """Run a method, and grey out the GUI until it's finished.
 
         Args:
@@ -260,7 +260,7 @@ class Editor(Tk):
         method()
         self.gui_busy_set(False)
 
-    def gui_busy_set(self, busy_status: bool, message: str="Working..."):
+    def gui_busy_set(self, busy_status: bool, message: str = "Working..."):
         """Set the GUI to busy or not busy
 
         Args:
@@ -344,7 +344,7 @@ class Editor(Tk):
         for button in (self.reset_def_bttn, self.save_def_bttn):
             button.config(state=new_state)
 
-    def load_files(self, select: bool=True, do_or_die: bool=False):
+    def load_files(self, select: bool = True, do_or_die: bool = False):
         """Load the wordlist and the popdefs (threaded)
 
         Args:
@@ -355,7 +355,7 @@ class Editor(Tk):
 
         self.thread_process(lambda: self.__load_files(select, do_or_die), message="Loading...")
 
-    def __load_files(self, select: bool=True, do_or_die: bool=False):
+    def __load_files(self, select: bool = True, do_or_die: bool = False):
         """Load the wordlist and the popdefs
 
         Args:
@@ -553,7 +553,7 @@ class Editor(Tk):
         # Disable definition reset and save buttons now that the definition was saved
         self.regulate_def_buttons()
 
-    def is_len_valid(self, word: str, notify: bool=False) -> bool:
+    def is_len_valid(self, word: str, notify: bool = False) -> bool:
         """Check if a word's length is valid.
 
         Args:
