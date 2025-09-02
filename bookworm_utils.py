@@ -50,6 +50,7 @@ try:
         wordnet.NOUN: "n.",
         wordnet.VERB: "v.",
         wordnet.ADJ: "adj.",
+        wordnet.ADJ_SAT: "adj.",
         wordnet.ADV: "adv.",
         # "Interjection": "int.",
         # "Preposition": "prep.",
