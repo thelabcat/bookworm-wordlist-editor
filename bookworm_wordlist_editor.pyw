@@ -435,6 +435,9 @@ class Editor(Tk):
 
         # *args is there to receive unnecessary event data as this is a callback method
 
+        # If we are in a thread, show progress
+        self.busy_text = "Saving..."
+
         # Backup system
         if backup:
             try:
