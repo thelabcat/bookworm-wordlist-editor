@@ -34,8 +34,8 @@ S.D.G.
 """
 
 import bisect
-import glob
 import getpass
+import os.path as op
 import platform
 import warnings
 import nltk
@@ -256,8 +256,7 @@ def is_game_path_valid(path: str) -> bool:
     Returns:
         valid (bool): If we found the two files."""
 
-    dircheck = glob.glob(path + "*")
-    return (path + WORDLIST_FILE in dircheck and path + POPDEFS_FILE in dircheck)
+    return op.exists(op.join(path, WORDLIST_FILE)) and op.exists(op.join(path, POPDEFS_FILE))
 
 
 def get_word_usage(word: str) -> float:
