@@ -18,7 +18,7 @@ this program. If not, see <https://www.gnu.org/licenses/>.
 S.D.G."""
 
 
-from tkinter import *
+import tkinter as tk
 from tkinter import messagebox as mb
 from tkinter import simpledialog as dialog
 from tkinter import filedialog
@@ -44,7 +44,7 @@ NO_WORD = "(no word selected)"
 DEFFIELD_SIZE = (15, 5)
 
 
-class Editor(Tk):
+class Editor(tk.Tk):
     """Main editor window"""
 
     def __init__(self):
@@ -70,7 +70,7 @@ class Editor(Tk):
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
 
         self.title(WINDOW_TITLE)  # Set the window title
-        self.iconphoto(True, PhotoImage(file=ICON_PATH))  # Set the window icon
+        self.iconphoto(True, tk.PhotoImage(file=ICON_PATH))  # Set the window icon
         self.build()
 
         # Load files
@@ -125,18 +125,18 @@ class Editor(Tk):
         self.bind("<Control-s>", self.save_files)
 
         # Menubar
-        self.menubar = Menu(self)
+        self.menubar = tk.Menu(self)
         self["menu"] = self.menubar
 
         # File menu
-        self.file_menu = Menu(self.menubar, tearoff=1)
+        self.file_menu = tk.Menu(self.menubar, tearoff=1)
         self.file_menu.add_command(label="O̲pen", command=lambda: self.load_files(select=True))
         self.file_menu.add_command(label="R̲eload", command=lambda: self.load_files(select=False))
         self.file_menu.add_command(label="S̲ave", command=self.save_files)
         self.menubar.add_cascade(label="File", menu=self.file_menu)
 
         # Edit menu
-        self.edit_menu = Menu(self.menubar, tearoff=1)
+        self.edit_menu = tk.Menu(self.menubar, tearoff=1)
         self.edit_menu.add_command(label="Delete orphaned definitions", command=self.del_orphaned_defs)
         self.edit_menu.add_command(label="Delete words of invalid length", command=self.del_invalid_len_words)
         self.edit_menu.add_command(label="Add several words", command=self.mass_add_words)
@@ -145,7 +145,7 @@ class Editor(Tk):
         self.menubar.add_cascade(label="Edit", menu=self.edit_menu)
 
         # Test menu
-        self.test_menu = Menu(self.menubar, tearoff=1)
+        self.test_menu = tk.Menu(self.menubar, tearoff=1)
         self.test_menu.add_command(label="Disable GUI", command=lambda: self.gui_busy_set(True))
         self.test_menu.add_command(label="Enable GUI", command=lambda: self.gui_busy_set(False))
         # self.menubar.add_cascade(label="Tests", menu=self.test_menu)  # Uncomment this to enable the test menu
@@ -155,91 +155,91 @@ class Editor(Tk):
         self.widgets_to_disable = []  # Widgets to disable when busy
 
         # Frame for list
-        self.list_frame = Frame(self)
-        self.list_frame.grid(row=0, column=0, sticky=NSEW)
+        self.list_frame = tk.Frame(self)
+        self.list_frame.grid(row=0, column=0, sticky=tk.NSEW)
         self.rowconfigure(0, weight=1)
         self.columnconfigure(0, weight=1)
 
         # Subframe for search system
-        self.search_frame=Frame(self.list_frame)
-        self.search_frame.grid(row=0, columnspan=2, sticky=NSEW)
+        self.search_frame = tk.Frame(self.list_frame)
+        self.search_frame.grid(row=0, columnspan=2, sticky=tk.NSEW)
 
         # Search system
-        self.search_label = Label(self.search_frame, text="Search:")
-        self.search_label.grid(row=0, column=0, sticky=N + S + W)
-        self.search = StringVar()
+        self.search_label = tk.Label(self.search_frame, text="Search:")
+        self.search_label.grid(row=0, column=0, sticky=tk.N + tk.S + tk.W)
+        self.search = tk.StringVar()
         self.search.trace_add("write", self.update_query)
-        self.search_entry = Entry(self.search_frame, textvariable=self.search)
-        self.search_entry.grid(row=0, column=1, sticky=NSEW)
+        self.search_entry = tk.Entry(self.search_frame, textvariable=self.search)
+        self.search_entry.grid(row=0, column=1, sticky=tk.NSEW)
         self.search_frame.columnconfigure(1, weight=1)
-        self.search_clear_bttn = Button(self.search_frame, text="X", command=lambda: self.search.set(""))
-        self.search_clear_bttn.grid(row=0, column=2, sticky=N + S + E)
+        self.search_clear_bttn = tk.Button(self.search_frame, text="X", command=lambda: self.search.set(""))
+        self.search_clear_bttn.grid(row=0, column=2, sticky=tk.N + tk.S + tk.E)
         self.widgets_to_disable += [self.search_label, self.search_entry, self.search_clear_bttn]
 
-        self.query_list=Variable(value=["foo", "bar", "bazz"])
-        self.query_box=Listbox(self.list_frame, listvariable=self.query_list, height=10, selectmode=SINGLE, exportselection=False)
+        self.query_list=tk.Variable(value=["foo", "bar", "bazz"])
+        self.query_box=tk.Listbox(self.list_frame, listvariable=self.query_list, height=10, selectmode=tk.SINGLE, exportselection=False)
         self.query_box.bind('<<ListboxSelect>>', self.selection_updated)
-        self.query_box.grid(row=1, column=0, sticky=NSEW)
+        self.query_box.grid(row=1, column=0, sticky=tk.NSEW)
         self.widgets_to_disable.append(self.query_box)
 
-        self.query_box_scrollbar = Scrollbar(self.list_frame, orient=VERTICAL, command=self.query_box.yview)
+        self.query_box_scrollbar = tk.Scrollbar(self.list_frame, orient=tk.VERTICAL, command=self.query_box.yview)
         self.query_box['yscrollcommand'] = self.query_box_scrollbar.set
-        self.query_box_scrollbar.grid(row=1, column=1, sticky=N + S + E)
+        self.query_box_scrollbar.grid(row=1, column=1, sticky=tk.N + tk.S + tk.E)
         # self.widgets_to_disable.append(self.query_box_scrollbar)  # Scrollbar cannot be state disabled
         self.list_frame.rowconfigure(1, weight=1)
         self.list_frame.columnconfigure(0, weight=1)
 
-        self.add_word_bttn = Button(self.list_frame, text="Add word", command=self.add_word)
-        self.add_word_bttn.grid(row=2, columnspan=2, sticky=NSEW)
+        self.add_word_bttn = tk.Button(self.list_frame, text="Add word", command=self.add_word)
+        self.add_word_bttn.grid(row=2, columnspan=2, sticky=tk.NSEW)
         self.widgets_to_disable.append(self.add_word_bttn)
 
         # Frame for word and definition
-        self.worddef_frame = Frame(self)
-        self.worddef_frame.grid(row=0, column=1, sticky=NSEW)
+        self.worddef_frame = tk.Frame(self)
+        self.worddef_frame.grid(row=0, column=1, sticky=tk.NSEW)
         self.worddef_frame.bind_all("<Key>", self.regulate_def_buttons)
         self.columnconfigure(1, weight=1)
 
         # Subframe for word and usage display
-        self.worddisp_frame = Frame(self.worddef_frame)
-        self.worddisp_frame.grid(row=0, columnspan=2, sticky=E + W)
+        self.worddisp_frame = tk.Frame(self.worddef_frame)
+        self.worddisp_frame.grid(row=0, columnspan=2, sticky=tk.E + tk.W)
         self.worddef_frame.columnconfigure(0, weight=1)
         self.worddef_frame.columnconfigure(1, weight=1)
 
-        self.word_display = Label(self.worddisp_frame, text=NO_WORD)
-        self.word_display.grid(row=0, column=0, sticky=E + W)
+        self.word_display = tk.Label(self.worddisp_frame, text=NO_WORD)
+        self.word_display.grid(row=0, column=0, sticky=tk.E + tk.W)
         self.widgets_to_disable.append(self.word_display)
         self.worddisp_frame.columnconfigure(0, weight=1)
 
-        self.usage_display = Label(self.worddisp_frame, text="")
-        self.usage_display.grid(row=0, column=1, sticky=E)
+        self.usage_display = tk.Label(self.worddisp_frame, text="")
+        self.usage_display.grid(row=0, column=1, sticky=tk.E)
         self.widgets_to_disable.append(self.usage_display)
 
-        self.def_field = Text(self.worddef_frame, width=DEFFIELD_SIZE[0], height=DEFFIELD_SIZE[1], wrap=WORD)
-        self.def_field.grid(row=1, columnspan=2, sticky=NSEW)
+        self.def_field = tk.Text(self.worddef_frame, width=DEFFIELD_SIZE[0], height=DEFFIELD_SIZE[1], wrap=tk.WORD)
+        self.def_field.grid(row=1, columnspan=2, sticky=tk.NSEW)
         self.widgets_to_disable.append(self.def_field)
         self.worddef_frame.rowconfigure(1, weight=1)
         self.worddef_frame.columnconfigure(0, weight=1)
         self.worddef_frame.columnconfigure(1, weight=1)
 
-        self.reset_def_bttn = Button(self.worddef_frame, text="Reset definition", command=self.selection_updated)
-        self.reset_def_bttn.grid(row=2, column=0, sticky=NSEW)
+        self.reset_def_bttn = tk.Button(self.worddef_frame, text="Reset definition", command=self.selection_updated)
+        self.reset_def_bttn.grid(row=2, column=0, sticky=tk.NSEW)
         self.widgets_to_disable.append(self.reset_def_bttn)
 
-        self.save_def_bttn = Button(self.worddef_frame, text="Save definition", command=self.update_definition)
-        self.save_def_bttn.grid(row=2, column=1, sticky=NSEW)
+        self.save_def_bttn = tk.Button(self.worddef_frame, text="Save definition", command=self.update_definition)
+        self.save_def_bttn.grid(row=2, column=1, sticky=tk.NSEW)
         self.widgets_to_disable.append(self.save_def_bttn)
 
-        self.autodef_bttn = Button(self.worddef_frame, text="Auto-define", command=self.auto_define)
-        self.autodef_bttn.grid(row=3, columnspan=2, sticky=NSEW)
+        self.autodef_bttn = tk.Button(self.worddef_frame, text="Auto-define", command=self.auto_define)
+        self.autodef_bttn.grid(row=3, columnspan=2, sticky=tk.NSEW)
         self.widgets_to_disable.append(self.autodef_bttn)
 
-        self.del_bttn = Button(self.worddef_frame, text="Delete word", command=self.del_word)
-        self.del_bttn.grid(row=4, columnspan=2, sticky=NSEW)
+        self.del_bttn = tk.Button(self.worddef_frame, text="Delete word", command=self.del_word)
+        self.del_bttn.grid(row=4, columnspan=2, sticky=tk.NSEW)
         self.widgets_to_disable.append(self.del_bttn)
 
         # Busy text that goes over everything
-        self.busy_displaytext = StringVar(self)
-        self.busy_label = Label(self, textvariable=self.busy_displaytext)
+        self.busy_displaytext = tk.StringVar(self)
+        self.busy_label = tk.Label(self, textvariable=self.busy_displaytext)
         self.busy_label.grid(row=0, column=0, columnspan=2)
 
     def thread_process(self, method: callable, message: str = "Working..."):
@@ -285,7 +285,7 @@ class Editor(Tk):
             self.busy_displaytext.set("")
             self.busy_label.lower()
 
-        new_state = (NORMAL, DISABLED)[int(new)]
+        new_state = (tk.NORMAL, tk.DISABLED)[int(new)]
         for entry in self.menubar_entries:
             self.menubar.entryconfig(entry, state=new_state)
         for widget in self.widgets_to_disable:
@@ -321,7 +321,7 @@ class Editor(Tk):
             return
 
         # buttons should be disabled if no word is selected
-        new_state = (NORMAL, DISABLED)[int(self.selected_word == NO_WORD)]
+        new_state = (tk.NORMAL, tk.DISABLED)[int(self.selected_word == NO_WORD)]
 
         for button in (self.autodef_bttn, self.del_bttn):
             button.config(state=new_state)
@@ -334,33 +334,33 @@ class Editor(Tk):
         if self.busy:
             return
 
-        def_entry = self.def_field.get("0.0", END).strip()  # Get the current entry
+        def_entry = self.def_field.get("0.0", tk.END).strip()  # Get the current entry
 
         # There is no selected word
         if self.selected_word == NO_WORD:
-            new_state = DISABLED
+            new_state = tk.DISABLED
 
         # We have an old definition for this word
         elif self.selected_word in self.defs:
             # The user deleted the old definition
             if not def_entry:
-                new_state = NORMAL
+                new_state = tk.NORMAL
 
             # The old definition is the same as the new one
             elif self.defs[self.selected_word] == def_entry:
-                new_state = DISABLED
+                new_state = tk.DISABLED
 
             # There is a new definition
             else:
-                new_state = NORMAL
+                new_state = tk.NORMAL
 
         # We do not have an old definition, and there is a new one
         elif def_entry:
-            new_state = NORMAL
+            new_state = tk.NORMAL
 
         # There was no old or new definition
         else:
-            new_state = DISABLED
+            new_state = tk.DISABLED
 
         for button in (self.reset_def_bttn, self.save_def_bttn):
             button.config(state=new_state)
@@ -535,13 +535,13 @@ class Editor(Tk):
         # The word is in our current query, so select and view it
         if word and word in self.query_list.get():
             word_query_index = self.query_list.get().index(word)
-            self.query_box.selection_clear(0, END)
+            self.query_box.selection_clear(0, tk.END)
             self.query_box.selection_set(word_query_index)
             self.query_box.see(word_query_index)
 
         # Something not in the query list was given, clear the selection
         else:
-            self.query_box.selection_clear(0, END)
+            self.query_box.selection_clear(0, tk.END)
 
         self.selection_updated()
 
@@ -549,7 +549,7 @@ class Editor(Tk):
         """Load the definition of the selected word if there is one"""
 
         # Clear any old displayed definition, regardless
-        self.def_field.delete(0.0, END)
+        self.def_field.delete(0.0, tk.END)
 
         # If we have a definition for this word, display it
         if self.selected_word != NO_WORD and self.selected_word in self.defs:
@@ -561,7 +561,7 @@ class Editor(Tk):
     def update_definition(self):
         """Update the stored definition for a word"""
 
-        def_entry = self.def_field.get("0.0", END).strip()
+        def_entry = self.def_field.get("0.0", tk.END).strip()
 
         # We have a definition to save
         if def_entry:
@@ -844,7 +844,7 @@ class Editor(Tk):
             return
 
         # Write out the auto-definition, but do not save
-        self.def_field.delete(0.0, END)
+        self.def_field.delete(0.0, tk.END)
         self.def_field.insert(0.0, result)
 
         # Enable or disable the definition handler buttons accordingly
