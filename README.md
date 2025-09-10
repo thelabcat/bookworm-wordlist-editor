@@ -36,7 +36,7 @@ For the auto-define button to work, the program requires an internet connection 
     - Delete several words: Select a text file of words and delete them all.
     - Auto-define undefined rare words: Find all words below my arbitrary usage threshold and attempt to auto-define them.
 
-## Information on antivirus false positives for PyInstaller executables
+## Information on antivirus false positives for PyInstaller executables:
 
 Recently, I discovered that multiple antivirus services are consistently flagging any and all Windows executables packaged with PyInstaller. This is a mistake: While malware could certainly be written in Python and subsequently packaged with PyInstaller into an exe, the exe would be malicious because of the packaged Python code, not because of PyInstaller. I've reported the problem to the antivirus services that I found false positive reporting forms for, but often only the specific app version was whitelisted, if anything at all. I tested BookWorm Deluxe Wordlist Editor v1.5.0 win x64 on April 27 in VirusTotal: It showed no malicious behavior from the application inside sandbox tests, and provided the following list of flags from security vendors.
 
@@ -74,11 +74,28 @@ Recently, I discovered that multiple antivirus services are consistently flaggin
 
 This is a known issue with, or rather limitation of, PyInstaller, and there is nothing its devs can really do about it. Since then, Malwarebytes in particular has tried to remedy the issue on their end, but a new bootloader update for PyInstaller could change that again. I'd like to thank them for that effort, in any case. Although I don't personally use their AV at the moment (since I mainly run Linux), it does seem an honorable thing for them to do IMO.
 
-Hope this helps! S.D.G.
-
-## Bundling yourself
+## Bundling yourself:
 If you wish to bundle the application yourself with PyInstaller, you can run `pyinstaller_build.sh` in Windows Git Bash or Linux. It requires that:
 - You have an internet connection.
 - The `python` and `pip` command point to Python 3.10 or newer and it's respective Pip tool (may point to Python 2.7 on some systems).
 - The venv package for that Python is installed.
 It will automatically set up a clean virtual environment with the program's dependencies and PyInstaller, update the word frequency list, then package the application.
+
+Hope this helps!
+
+## Legal:
+Copyright 2025 Wilbur Jaywright d.b.a. Marswide BGL.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+**S.D.G.**
