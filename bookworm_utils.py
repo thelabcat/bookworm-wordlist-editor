@@ -45,8 +45,14 @@ from wordfreq import zipf_frequency
 # Language and charset information
 ALPHABET = "abcdefghijklmnopqrstuvwxyz"
 NUMERIC = "1234567890"
+
+# Make sure we have the NLTK wordnet for our English dictionary
+# Note: Without internet, nltk.download will quietly fail and return False.
+# With internet, it will return True even if we already had wordnet.
+nltk.download("wordnet")
 try:
-    WORD_TYPES = {  # Word types that NLTK wordnet may return, and their abbreviations
+    # Word part-of-speech's that NLTK wordnet may return, and their abbreviations
+    WORD_POS = {
         wordnet.NOUN: "n.",
         wordnet.VERB: "v.",
         wordnet.ADJ: "adj.",
@@ -55,13 +61,14 @@ try:
         # "Interjection": "int.",
         # "Preposition": "prep.",
         # "Conjugation": "conj."
-            }
+    }
     HAVE_WORDNET = True
 
+# Referencing word part-of-speech's in wordnet if we don't have wordnet raises LookupError.
 except LookupError:
     warnings.warn("NLTK wordnet load failed with LookupError.")
     print("Auto definition will not be available.")
-    WORD_TYPES = None
+    WORD_POS = None
     HAVE_WORDNET = False
 
 LANG = "en"  # Language to use when checking word rarity
@@ -80,8 +87,8 @@ SYS_USER = getpass.getuser()
 GAME_PATH_DEFAULT = {
     "Linux": f"/home/{SYS_USER}/.wine/drive_c/Program Files/PopCap Games/BookWorm Deluxe/",
     "Darwin": f"/Users/{SYS_USER}/.wine/drive_c/Program Files/PopCap Games/BookWorm Deluxe/",
-    "Windows": "C:\\Program Files\\PopCap Games\\BookWorm Deluxe\\"
-    }[platform.system()]
+    "Windows": "C:\\Program Files\\PopCap Games\\BookWorm Deluxe\\",
+}[platform.system()]
 
 WORDLIST_FILE = "wordlist.txt"
 POPDEFS_FILE = "popdefs.txt"
@@ -89,9 +96,6 @@ POPDEFS_FILE = "popdefs.txt"
 # Encoding to use when opening the wordlist and popdefs files
 WORDLIST_ENC = "utf-8"
 POPDEFS_ENC = "iso 8859-15"
-
-# Make sure we have the NLTK wordnet for our English dictionary
-nltk.download("wordnet")
 
 
 def unpack_wordlist(wordlist: str) -> list:
@@ -130,7 +134,9 @@ def unpack_wordlist(wordlist: str) -> list:
             words.append(listing[i:])
 
         else:
-            raise ValueError("Copy count is {copy} at the first word but there are no words yet.")
+            raise ValueError(
+                "Copy count is {copy} at the first word but there are no words yet."
+            )
 
     return words
 
@@ -184,7 +190,11 @@ def unpack_popdefs(popdefs: str) -> dict[str, str]:
         definitions (dict[str, str]): The parsed popup definitions"""
 
     # Split all non-blank lines at a tab, into the lowercase word and its definition
-    return {line.split("\t")[0].lower(): line.split("\t")[1] for line in popdefs.strip().splitlines() if line}
+    return {
+        line.split("\t")[0].lower(): line.split("\t")[1]
+        for line in popdefs.strip().splitlines()
+        if line
+    }
 
 
 def pack_popdefs(defs: dict[str, str]) -> str:
@@ -196,7 +206,9 @@ def pack_popdefs(defs: dict[str, str]) -> str:
     Returns:
         popdefs (str): The contents of a new popdefs.txt"""
 
-    return "\n".join([word.upper() + "\t" + definition for word, definition in sorted(defs.items())])
+    return "\n".join(
+        [word.upper() + "\t" + definition for word, definition in sorted(defs.items())]
+    )
 
 
 def build_auto_def(word: str) -> str | None:
@@ -211,21 +223,21 @@ def build_auto_def(word: str) -> str | None:
         success (bool): Wether or not we succeeded."""
 
     if not HAVE_WORDNET:
-        return "We need to download NLTK wordnet for this. " +\
-            "Please connect to the internet, then restart the application.", \
-            False
+        return (
+            "We need to download NLTK wordnet for this. "
+            + "Please connect to the internet, then restart the application.",
+            False,
+        )
 
     try:
         synsets = wordnet.synsets(word)
     except LookupError:
-        return "LookupError raised. " +\
-            "The NLTK wordnet package is missing.", \
-            False
+        return "LookupError raised. " + "The NLTK wordnet package is missing.", False
 
     if not synsets:
         return f"No definition found for '{word}'", False
 
-    # Group definitions together by word type
+    # Group definitions together by word part-of-speech
     pos_groups = {}
     for ss in synsets:
         if (pos := ss.pos()) not in pos_groups:
@@ -234,17 +246,15 @@ def build_auto_def(word: str) -> str | None:
             pos_groups[pos].append(ss.definition())
 
     return "; ".join(  # type groups are split by semicolon
-        f"({WORD_TYPES[pos]}) " +  # Each type group starts with the type
-
+        f"({WORD_POS[pos]}) "  # Each type group starts with the type
+        +
         # Definitions within a group are also split by semicolon
         # Each definition should also be capitalized
         "; ".join((d.capitalize() for d in definitions))
-
         # Iterate through type groups with the definitions in them
         for pos, definitions in pos_groups.items()
         # The last definition needs a period.
-        ) + ".", \
-        True  # Report success
+    ) + ".", True  # Report success
 
 
 def is_game_path_valid(path: str) -> bool:
@@ -256,7 +266,9 @@ def is_game_path_valid(path: str) -> bool:
     Returns:
         valid (bool): If we found the two files."""
 
-    return op.exists(op.join(path, WORDLIST_FILE)) and op.exists(op.join(path, POPDEFS_FILE))
+    return op.exists(op.join(path, WORDLIST_FILE)) and op.exists(
+        op.join(path, POPDEFS_FILE)
+    )
 
 
 def get_word_usage(word: str) -> float:
@@ -287,3 +299,6 @@ def binary_search(elements, value):
     index = bisect.bisect_left(elements, value)
     if index < len(elements) and elements[index] == value:
         return index
+
+    # Lookup failed
+    return None
