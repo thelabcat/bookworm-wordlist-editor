@@ -14,8 +14,9 @@ You can find executables with bundled Python and the dependencies in the Release
 ## Usage:
 To run from source, install Python 3.10 or newer, and then the dependencies, then use Python to run the .pyw program.
 
+For the auto-define button to work, the program requires an internet connection to download the NLTK wordnet package when it starts up for the first time. If it doesn't have one, it will still function mostly-normally, but the button will just show an error message. It will try to download wordnet again on the next startup.
+
 ### Program operation:
-- For the auto-define button to work, the program requires an internet connection to download the NLTK wordnet package when it starts up for the first time. If it doesn't have one, it will still function mostly-normally, but the button will just show an error message. It will try to download wordnet again on the next startup.
 - When the program opens, it will default to opening the BookWorm Deluxe folder in the expected system location per your platform. If on Linux or MacOS, it will assume the default Wine prefix in your user directory. If it does not find the wordlist.txt and popdefs.txt files in this default location, or the default location doesn't exist, it will ask you to choose the BookWorm Deluxe folder manually. After it loads, you should see a list of words in the left pane.
 - Select a word to see its usage frequency according to wordfreq, and its current popdef (blank for no popdef). If the usage frequency is below an arbitrary value where I think it might need a popdef, it will show in red. Otherwise, it will show in black. While a word is selected you can:
     - Edit the popdef and save it. Note that if you select a different word before saving the definition, it will reset.
@@ -37,7 +38,7 @@ To run from source, install Python 3.10 or newer, and then the dependencies, the
 
 ## Information on antivirus false positives for PyInstaller executables
 
-Recently, I discovered that multiple antivirus services are consistently flagging any and all Windows executables packaged with PyInstaller. This is a mistake: While malware could certainly be written in Python and subsequently packaged with PyInstaller into an exe, the exe would be malicious because of the packaged Python code, not because of PyInstaller. I've reported the problem to the antivirus services that I found false positive reporting forms for, but only the specific app version was whitelisted, if anything at all, in most cases. I tested BookWorm Deluxe Wordlist Editor v1.5.0 win x64 on April 27 in VirusTotal: It showed no malicious behavior from the application inside sandbox tests, and provided the following list of flags from security vendors. If you receive a different report than this, or you know of a permanent solution, please let me know, as this has been an ongoing problem.
+Recently, I discovered that multiple antivirus services are consistently flagging any and all Windows executables packaged with PyInstaller. This is a mistake: While malware could certainly be written in Python and subsequently packaged with PyInstaller into an exe, the exe would be malicious because of the packaged Python code, not because of PyInstaller. I've reported the problem to the antivirus services that I found false positive reporting forms for, but often only the specific app version was whitelisted, if anything at all. I tested BookWorm Deluxe Wordlist Editor v1.5.0 win x64 on April 27 in VirusTotal: It showed no malicious behavior from the application inside sandbox tests, and provided the following list of flags from security vendors.
 
 
 <table>
@@ -71,7 +72,13 @@ Recently, I discovered that multiple antivirus services are consistently flaggin
     </tr>
 </table>
 
+This is a known issue with, or rather limitation of, PyInstaller, and there is nothing its devs can really do about it. Since then, Malwarebytes in particular has tried to remedy the issue on their end, but a new bootloader update for PyInstaller could change that again. I'd like to thank them for that effort, in any case. Although I don't personally use their AV at the moment (since I mainly run Linux), it does seem an honorable thing for them to do IMO.
+
 Hope this helps! S.D.G.
 
 ## Bundling yourself
-If you wish to bundle the application yourself with PyInstaller, you can run `pyinstaller_build.sh` in Windows Git Bash or Linux, so long as you have an internet connection, and the `python` command points to Python 3.10 or newer (may point to Python 2.7 on some systems). It will automatically set up a clean virtual environment with the program's dependencies and PyInstaller, update the word frequency list, then package the application.
+If you wish to bundle the application yourself with PyInstaller, you can run `pyinstaller_build.sh` in Windows Git Bash or Linux. It requires that:
+- You have an internet connection.
+- The `python` and `pip` command point to Python 3.10 or newer and it's respective Pip tool (may point to Python 2.7 on some systems).
+- The venv package for that Python is installed.
+It will automatically set up a clean virtual environment with the program's dependencies and PyInstaller, update the word frequency list, then package the application.
