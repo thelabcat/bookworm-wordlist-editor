@@ -3,41 +3,45 @@
 
 An application for editing the word list and popdefs in BookWorm Deluxe.
 
-This program is free software: you can redistribute it and/or modify it under
-the terms of the GNU General Public License as published by the Free Software
-Foundation, either version 3 of the License, or (at your option) any later
-version.
+Copyright 2025 Wilbur Jaywright d.b.a. Marswide BGL.
 
-This program is distributed in the hope that it will be useful, but WITHOUT ANY
-WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
-PARTICULAR PURPOSE. See the GNU General Public License for more details.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-You should have received a copy of the GNU General Public License along with
-this program. If not, see <https://www.gnu.org/licenses/>.
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 
 S.D.G."""
 
-
-import tkinter as tk
-from tkinter import messagebox as mb
-from tkinter import simpledialog as dialog
-from tkinter import filedialog
 import os
 from os import path as op
 import shutil
 import sys
 import threading
+import tkinter as tk
+from tkinter import messagebox as mb
+from tkinter import simpledialog as dialog
+from tkinter import filedialog
+import webbrowser
 import bookworm_utils as bw
+import info
 
 # File paths and related info
 OP_PATH = op.dirname(__file__)  # The path of the script file's containing folder
-ICON_PATH = op.join(OP_PATH, "bookworm_wordlist_editor.png")
 
 BACKUP_SUFFIX = ".bak"  # Suffix for backup files
 
 # Miscellanious GUI settings
-WINDOW_TITLE = "BookWorm Deluxe Wordlist Editor"
-UNSAVED_WINDOW_TITLE = "*" + WINDOW_TITLE  # Title of window when there are unsaved changes
+WINDOW_TITLE = info.PROGRAM_NAME
+UNSAVED_WINDOW_TITLE = (
+    "*" + WINDOW_TITLE
+)  # Title of window when there are unsaved changes
 RARE_COLS = ("#000", "#c00")  # Index with int(<is rare?>)
 WORDFREQ_DISP_PREFIX = "Usage: "
 NO_WORD = "(no word selected)"
@@ -70,7 +74,7 @@ class Editor(tk.Tk):
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
 
         self.title(WINDOW_TITLE)  # Set the window title
-        self.iconphoto(True, tk.PhotoImage(file=ICON_PATH))  # Set the window icon
+        self.iconphoto(True, tk.PhotoImage(file=info.ICON_PATH))  # Set the window icon
         self.build()
 
         # Load files
@@ -104,7 +108,10 @@ class Editor(tk.Tk):
         """What to do if the user clicks to close this window"""
 
         if self.unsaved_changes:
-            answer = mb.askyesnocancel("Unsaved changes", "There are currently unsaved changes to the word list and / or popdefs. Save before exiting?")
+            answer = mb.askyesnocancel(
+                "Unsaved changes",
+                "There are currently unsaved changes to the word list and / or popdefs. Save before exiting?",
+            )
 
             # The user cancelled the exit
             if answer is None:
@@ -130,27 +137,52 @@ class Editor(tk.Tk):
 
         # File menu
         self.file_menu = tk.Menu(self.menubar, tearoff=1)
-        self.file_menu.add_command(label="O̲pen", command=lambda: self.load_files(select=True))
-        self.file_menu.add_command(label="R̲eload", command=lambda: self.load_files(select=False))
-        self.file_menu.add_command(label="S̲ave", command=self.save_files)
+        self.file_menu.add_command(
+            label="Open", underline=0, command=lambda: self.load_files(select=True)
+        )
+        self.file_menu.add_command(
+            label="Reload", underline=0, command=lambda: self.load_files(select=False)
+        )
+        self.file_menu.add_command(label="Save", underline=0, command=self.save_files)
         self.menubar.add_cascade(label="File", menu=self.file_menu)
 
         # Edit menu
         self.edit_menu = tk.Menu(self.menubar, tearoff=1)
-        self.edit_menu.add_command(label="Delete orphaned definitions", command=self.del_orphaned_defs)
-        self.edit_menu.add_command(label="Delete words of invalid length", command=self.del_invalid_len_words)
-        self.edit_menu.add_command(label="Add several words", command=self.mass_add_words)
-        self.edit_menu.add_command(label="Delete several words", command=self.mass_delete_words)
-        self.edit_menu.add_command(label="Auto-define undefined rare words", command=self.mass_auto_define)
+        self.edit_menu.add_command(
+            label="Delete orphaned definitions", command=self.del_orphaned_defs
+        )
+        self.edit_menu.add_command(
+            label="Delete words of invalid length", command=self.del_invalid_len_words
+        )
+        self.edit_menu.add_command(
+            label="Add several words", command=self.mass_add_words
+        )
+        self.edit_menu.add_command(
+            label="Delete several words", command=self.mass_delete_words
+        )
+        self.edit_menu.add_command(
+            label="Auto-define undefined rare words", command=self.mass_auto_define
+        )
         self.menubar.add_cascade(label="Edit", menu=self.edit_menu)
 
-        # Test menu
-        self.test_menu = tk.Menu(self.menubar, tearoff=1)
-        self.test_menu.add_command(label="Disable GUI", command=lambda: self.gui_busy_set(True))
-        self.test_menu.add_command(label="Enable GUI", command=lambda: self.gui_busy_set(False))
-        # self.menubar.add_cascade(label="Tests", menu=self.test_menu)  # Uncomment this to enable the test menu
+        # Help menu
+        self.help_menu = tk.Menu(self.menubar, tearoff=1)
+        self.help_menu.add_command(
+            label="How to use",
+            foreground="blue",
+            command=lambda: webbrowser.open(info.URL.how_to_use),
+        )
+        self.help_menu.add_command(
+            label="Report an issue",
+            foreground="blue",
+            command=lambda: webbrowser.open(info.URL.report_issue),
+        )
+        self.help_menu.add_command(
+            label="About", command=lambda: info.AboutDialogue(self)
+        )
+        self.menubar.add_cascade(label="Help", menu=self.help_menu)
 
-        self.menubar_entries = ("File", "Edit")  # Menus to disable when busy
+        self.menubar_entries = ("File", "Edit", "Help")  # Menus to disable when busy
 
         self.widgets_to_disable = []  # Widgets to disable when busy
 
@@ -172,24 +204,40 @@ class Editor(tk.Tk):
         self.search_entry = tk.Entry(self.search_frame, textvariable=self.search)
         self.search_entry.grid(row=0, column=1, sticky=tk.NSEW)
         self.search_frame.columnconfigure(1, weight=1)
-        self.search_clear_bttn = tk.Button(self.search_frame, text="X", command=lambda: self.search.set(""))
+        self.search_clear_bttn = tk.Button(
+            self.search_frame, text="X", command=lambda: self.search.set("")
+        )
         self.search_clear_bttn.grid(row=0, column=2, sticky=tk.N + tk.S + tk.E)
-        self.widgets_to_disable += [self.search_label, self.search_entry, self.search_clear_bttn]
+        self.widgets_to_disable += [
+            self.search_label,
+            self.search_entry,
+            self.search_clear_bttn,
+        ]
 
-        self.query_list=tk.Variable(value=["foo", "bar", "bazz"])
-        self.query_box=tk.Listbox(self.list_frame, listvariable=self.query_list, height=10, selectmode=tk.SINGLE, exportselection=False)
-        self.query_box.bind('<<ListboxSelect>>', self.selection_updated)
+        self.query_list = tk.Variable(value=["foo", "bar", "bazz"])
+        self.query_box = tk.Listbox(
+            self.list_frame,
+            listvariable=self.query_list,
+            height=10,
+            selectmode=tk.SINGLE,
+            exportselection=False,
+        )
+        self.query_box.bind("<<ListboxSelect>>", self.selection_updated)
         self.query_box.grid(row=1, column=0, sticky=tk.NSEW)
         self.widgets_to_disable.append(self.query_box)
 
-        self.query_box_scrollbar = tk.Scrollbar(self.list_frame, orient=tk.VERTICAL, command=self.query_box.yview)
-        self.query_box['yscrollcommand'] = self.query_box_scrollbar.set
+        self.query_box_scrollbar = tk.Scrollbar(
+            self.list_frame, orient=tk.VERTICAL, command=self.query_box.yview
+        )
+        self.query_box["yscrollcommand"] = self.query_box_scrollbar.set
         self.query_box_scrollbar.grid(row=1, column=1, sticky=tk.N + tk.S + tk.E)
         # self.widgets_to_disable.append(self.query_box_scrollbar)  # Scrollbar cannot be state disabled
         self.list_frame.rowconfigure(1, weight=1)
         self.list_frame.columnconfigure(0, weight=1)
 
-        self.add_word_bttn = tk.Button(self.list_frame, text="Add word", command=self.add_word)
+        self.add_word_bttn = tk.Button(
+            self.list_frame, text="Add word", command=self.add_word
+        )
         self.add_word_bttn.grid(row=2, columnspan=2, sticky=tk.NSEW)
         self.widgets_to_disable.append(self.add_word_bttn)
 
@@ -214,26 +262,39 @@ class Editor(tk.Tk):
         self.usage_display.grid(row=0, column=1, sticky=tk.E)
         self.widgets_to_disable.append(self.usage_display)
 
-        self.def_field = tk.Text(self.worddef_frame, width=DEFFIELD_SIZE[0], height=DEFFIELD_SIZE[1], wrap=tk.WORD)
+        self.def_field = tk.Text(
+            self.worddef_frame,
+            width=DEFFIELD_SIZE[0],
+            height=DEFFIELD_SIZE[1],
+            wrap=tk.WORD,
+        )
         self.def_field.grid(row=1, columnspan=2, sticky=tk.NSEW)
         self.widgets_to_disable.append(self.def_field)
         self.worddef_frame.rowconfigure(1, weight=1)
         self.worddef_frame.columnconfigure(0, weight=1)
         self.worddef_frame.columnconfigure(1, weight=1)
 
-        self.reset_def_bttn = tk.Button(self.worddef_frame, text="Reset definition", command=self.selection_updated)
+        self.reset_def_bttn = tk.Button(
+            self.worddef_frame, text="Reset definition", command=self.selection_updated
+        )
         self.reset_def_bttn.grid(row=2, column=0, sticky=tk.NSEW)
         self.widgets_to_disable.append(self.reset_def_bttn)
 
-        self.save_def_bttn = tk.Button(self.worddef_frame, text="Save definition", command=self.update_definition)
+        self.save_def_bttn = tk.Button(
+            self.worddef_frame, text="Save definition", command=self.update_definition
+        )
         self.save_def_bttn.grid(row=2, column=1, sticky=tk.NSEW)
         self.widgets_to_disable.append(self.save_def_bttn)
 
-        self.autodef_bttn = tk.Button(self.worddef_frame, text="Auto-define", command=self.auto_define)
+        self.autodef_bttn = tk.Button(
+            self.worddef_frame, text="Auto-define", command=self.auto_define
+        )
         self.autodef_bttn.grid(row=3, columnspan=2, sticky=tk.NSEW)
         self.widgets_to_disable.append(self.autodef_bttn)
 
-        self.del_bttn = tk.Button(self.worddef_frame, text="Delete word", command=self.del_word)
+        self.del_bttn = tk.Button(
+            self.worddef_frame, text="Delete word", command=self.del_word
+        )
         self.del_bttn.grid(row=4, columnspan=2, sticky=tk.NSEW)
         self.widgets_to_disable.append(self.del_bttn)
 
@@ -249,7 +310,9 @@ class Editor(tk.Tk):
             method (callable): The method to run in a thread.
             message (str): The message to show over the greyed out GUI."""
 
-        self.thread = threading.Thread(target=lambda: self.__busy_run(method, message), daemon=True)
+        self.thread = threading.Thread(
+            target=lambda: self.__busy_run(method, message), daemon=True
+        )
         self.thread.start()
 
     def __busy_run(self, method: callable, message: str = "Working.."):
@@ -374,7 +437,9 @@ class Editor(tk.Tk):
             do_or_die(bool): Wether or not cancelling is not an option.
                 Defaults to False, cancelling is an option."""
 
-        self.thread_process(lambda: self.__load_files(select, do_or_die), message="Loading...")
+        self.thread_process(
+            lambda: self.__load_files(select, do_or_die), message="Loading..."
+        )
 
     def __load_files(self, select: bool = True, do_or_die: bool = False):
         """Load the wordlist and the popdefs
@@ -391,31 +456,45 @@ class Editor(tk.Tk):
         # While we need to select something
         while select:
             while True:  # Keep asking for an input
-                response = filedialog.askdirectory(title="Game directory", initialdir=self.game_path)
+                response = filedialog.askdirectory(
+                    title="Game directory", initialdir=self.game_path
+                )
                 if response:
                     break  # We got a response, so break the loop
 
                 if not do_or_die:
                     return  # We did not get a response, but we aren't supposed to force. Assumes the game is not installed to root directory.
 
-                if mb.askyesno("Cannot cancel", "The program needs a valid directory to continue. Exit the program?"):  # Do or die
+                if mb.askyesno(
+                    "Cannot cancel",
+                    "The program needs a valid directory to continue. Exit the program?",
+                ):  # Do or die
                     self.destroy()
                     sys.exit()
 
-            select = not bw.is_game_path_valid(response + os.sep)  # If the game path is valid, we are no longer selecting
+            select = not bw.is_game_path_valid(
+                response + os.sep
+            )  # If the game path is valid, we are no longer selecting
             if select:
-                mb.showerror("Invalid directory", "Could not find the word list and pop definitions here.")
+                mb.showerror(
+                    "Invalid directory",
+                    "Could not find the word list and pop definitions here.",
+                )
             else:
                 self.game_path = response + os.sep  # We got a new valid directory
 
         # First, load the wordlist
         self.busy_text = f"Loading {bw.WORDLIST_FILE}..."
-        with open(op.join(self.game_path, bw.WORDLIST_FILE), encoding=bw.WORDLIST_ENC) as f:
+        with open(
+            op.join(self.game_path, bw.WORDLIST_FILE), encoding=bw.WORDLIST_ENC
+        ) as f:
             self.words = bw.unpack_wordlist(f.read().strip())
 
         # Then, load the popdefs
         self.busy_text = f"Loading {bw.POPDEFS_FILE}..."
-        with open(op.join(self.game_path, bw.POPDEFS_FILE), encoding=bw.POPDEFS_ENC) as f:
+        with open(
+            op.join(self.game_path, bw.POPDEFS_FILE), encoding=bw.POPDEFS_ENC
+        ) as f:
             self.defs = bw.unpack_popdefs(f.read().strip())
 
         # Update the query list
@@ -441,17 +520,30 @@ class Editor(tk.Tk):
         # Backup system
         if backup:
             try:
-                shutil.copy(op.join(self.game_path, bw.WORDLIST_FILE), op.join(self.game_path, bw.WORDLIST_FILE + BACKUP_SUFFIX))
-                shutil.copy(op.join(self.game_path, bw.POPDEFS_FILE), op.join(self.game_path, bw.POPDEFS_FILE + BACKUP_SUFFIX))
+                shutil.copy(
+                    op.join(self.game_path, bw.WORDLIST_FILE),
+                    op.join(self.game_path, bw.WORDLIST_FILE + BACKUP_SUFFIX),
+                )
+                shutil.copy(
+                    op.join(self.game_path, bw.POPDEFS_FILE),
+                    op.join(self.game_path, bw.POPDEFS_FILE + BACKUP_SUFFIX),
+                )
             except FileNotFoundError:
-                mb.showerror("Backup failed", "Could not back up the original files because they have disappeared.")
+                mb.showerror(
+                    "Backup failed",
+                    "Could not back up the original files because they have disappeared.",
+                )
 
         # First, save the wordlist
-        with open(op.join(self.game_path, bw.WORDLIST_FILE), "w", encoding=bw.WORDLIST_ENC) as f:
+        with open(
+            op.join(self.game_path, bw.WORDLIST_FILE), "w", encoding=bw.WORDLIST_ENC
+        ) as f:
             f.write(bw.pack_wordlist(self.words))
 
         # Then, save the popdefs
-        with open(op.join(self.game_path, bw.POPDEFS_FILE), "w", encoding=bw.POPDEFS_ENC) as f:
+        with open(
+            op.join(self.game_path, bw.POPDEFS_FILE), "w", encoding=bw.POPDEFS_ENC
+        ) as f:
             f.write(bw.pack_popdefs(self.defs))
 
         self.unsaved_changes = False  # All changes are now saved
@@ -475,7 +567,10 @@ class Editor(tk.Tk):
         else:
             try:
                 usage = bw.get_word_usage(self.selected_word)
-                self.usage_display.config(text=WORDFREQ_DISP_PREFIX + str(usage), fg=RARE_COLS[int(usage < bw.RARE_THRESH)])
+                self.usage_display.config(
+                    text=WORDFREQ_DISP_PREFIX + str(usage),
+                    fg=RARE_COLS[int(usage < bw.RARE_THRESH)],
+                )
             except LookupError:
                 print("Usage lookup faliure. See issue  # 5.")
 
@@ -488,7 +583,9 @@ class Editor(tk.Tk):
         # *args is there to receive unnecessary event data as this is a callback method
 
         # Do not allow any capitalization or non-letters in the search field
-        self.search.set("".join([char for char in self.search.get().lower() if char in bw.ALPHABET]))
+        self.search.set(
+            "".join([char for char in self.search.get().lower() if char in bw.ALPHABET])
+        )
 
         search = self.search.get()
 
@@ -593,7 +690,10 @@ class Editor(tk.Tk):
 
         if notify and not bw.WORD_LENGTH_MIN <= len(word) <= bw.WORD_LENGTH_MAX:
             # Dialog auto-selects the word "short" or "long" based on wether the invalid length was a too long case or not
-            mb.showerror("Word is too " + ("short", "long")[int(len(word) > bw.WORD_LENGTH_MAX)], f"Word must be between {bw.WORD_LENGTH_MIN} and {bw.WORD_LENGTH_MAX} letters long.")
+            mb.showerror(
+                "Word is too " + ("short", "long")[int(len(word) > bw.WORD_LENGTH_MAX)],
+                f"Word must be between {bw.WORD_LENGTH_MIN} and {bw.WORD_LENGTH_MAX} letters long.",
+            )
 
         return bw.WORD_LENGTH_MIN <= len(word) <= bw.WORD_LENGTH_MAX
 
@@ -610,7 +710,10 @@ class Editor(tk.Tk):
         # Ensure that the word is only letters
         for char in new:
             if char not in bw.ALPHABET:
-                mb.showerror("Invalid character found", "Word must be only letters (no numbers or symbols).")
+                mb.showerror(
+                    "Invalid character found",
+                    "Word must be only letters (no numbers or symbols).",
+                )
                 return
 
         # If the word really is new, add it
@@ -626,7 +729,9 @@ class Editor(tk.Tk):
             self.unsaved_changes = True
 
         else:
-            mb.showinfo("Already have word", f"The word {new} is already in the word list.")
+            mb.showinfo(
+                "Already have word", f"The word {new} is already in the word list."
+            )
 
         # Highlight and scroll to the new word even if it wasn't actually new, so long as it is in our current search results
         self.set_selected_word(new)
@@ -640,7 +745,10 @@ class Editor(tk.Tk):
         """Add a whole file's worth of words"""
 
         # Open and read a file with a human-readable list of new words
-        f = filedialog.askopenfile(title="Select human-readable list of words", filetypes=[("Plain text", "*.txt")])
+        f = filedialog.askopenfile(
+            title="Select human-readable list of words",
+            filetypes=[("Plain text", "*.txt")],
+        )
 
         # The user cancelled via the open file dialog
         if not f:
@@ -669,17 +777,25 @@ class Editor(tk.Tk):
 
         # Filter to words we do not already have
         self.busy_text = "Filtering to only new words..."
-        new_words = [word for word in add_words if bw.binary_search(self.words, word) is None]
+        new_words = [
+            word for word in add_words if bw.binary_search(self.words, word) is None
+        ]
         already_have = len(add_words) - len(new_words)
 
         # There were no words that we didn't already have
         if not new_words:
-            mb.showinfo("Already have all words", f"All {len(add_words)} words are already in the word list.")
+            mb.showinfo(
+                "Already have all words",
+                f"All {len(add_words)} words are already in the word list.",
+            )
             return
 
         # We already have some of the words
         if already_have:
-            mb.showinfo("Already have some words", f"{already_have} words are already in the word list.")
+            mb.showinfo(
+                "Already have some words",
+                f"{already_have} words are already in the word list.",
+            )
 
         # Filter to words of valid lengths
         self.busy_text = "Filtering out invalid length words..."
@@ -688,12 +804,18 @@ class Editor(tk.Tk):
 
         # There were no words of valid length
         if not new_lenvalid_words:
-            mb.showerror("Invalid word lengths", f"All {len(new_words)} new words were rejected because they were not between {bw.WORD_LENGTH_MIN} and {bw.WORD_LENGTH_MAX} letters long.")
+            mb.showerror(
+                "Invalid word lengths",
+                f"All {len(new_words)} new words were rejected because they were not between {bw.WORD_LENGTH_MIN} and {bw.WORD_LENGTH_MAX} letters long.",
+            )
             return
 
         # There were some words of invalid length
         if len_invalid:
-            mb.showinfo("Some invalid word lengths", f"{len_invalid} words were rejected because they were not between {bw.WORD_LENGTH_MIN} and {bw.WORD_LENGTH_MAX} letters long.")
+            mb.showinfo(
+                "Some invalid word lengths",
+                f"{len_invalid} words were rejected because they were not between {bw.WORD_LENGTH_MIN} and {bw.WORD_LENGTH_MAX} letters long.",
+            )
 
         # Add the new words
         self.busy_text = "Combining lists..."
@@ -706,7 +828,10 @@ class Editor(tk.Tk):
         # There are now unsaved changes
         self.unsaved_changes = True
 
-        if mb.askyesno("Words added", f"Added {len(new_lenvalid_words)} new words to the word list. Save changes to disk now?"):
+        if mb.askyesno(
+            "Words added",
+            f"Added {len(new_lenvalid_words)} new words to the word list. Save changes to disk now?",
+        ):
             self.save_files()
 
     def mass_delete_words(self):
@@ -717,7 +842,10 @@ class Editor(tk.Tk):
     def __mass_delete_words(self):
         """Delete a whole file's worth of words"""
 
-        f = filedialog.askopenfile(title="Select human-readable list of words", filetypes=[("Plain text", "*.txt")])
+        f = filedialog.askopenfile(
+            title="Select human-readable list of words",
+            filetypes=[("Plain text", "*.txt")],
+        )
         if not f:  # The user cancelled
             return
         text = f.read().strip().lower()
@@ -730,20 +858,30 @@ class Editor(tk.Tk):
             mb.showerror("Invalid file", "File did not contain any alphabetic text.")
             return
 
-        del_words = alpha_text.split()  # Get all words, delimited by whitespace, in lowercase
+        del_words = (
+            alpha_text.split()
+        )  # Get all words, delimited by whitespace, in lowercase
         if not del_words:
             mb.showerror("Invalid file", "Did not find any words in file.")
             return
 
         self.busy_text = "Finding words we do have..."
-        old_words = [word for word in del_words if bw.binary_search(self.words, word) is not None]  # Filter words to ones we do have
+        old_words = [
+            word for word in del_words if bw.binary_search(self.words, word) is not None
+        ]  # Filter words to ones we do have
         dont_have = len(del_words) - len(old_words)
         if not old_words:
-            mb.showinfo("Don't have any of the words", f"None of the {len(del_words)} words are in the word list.")
+            mb.showinfo(
+                "Don't have any of the words",
+                f"None of the {len(del_words)} words are in the word list.",
+            )
             return
 
         if dont_have:
-            mb.showinfo("Don't have some words", f"{dont_have} of the words are not in the wordlist.")
+            mb.showinfo(
+                "Don't have some words",
+                f"{dont_have} of the words are not in the wordlist.",
+            )
 
         self.busy_text = "Deleting..."
         for word in old_words:
@@ -755,7 +893,10 @@ class Editor(tk.Tk):
         # There are now unsaved changes
         self.unsaved_changes = True
 
-        if mb.askyesno("Words deleted", f"Removed {len(old_words)} words from the word list. Save changes to disk now?"):
+        if mb.askyesno(
+            "Words deleted",
+            f"Removed {len(old_words)} words from the word list. Save changes to disk now?",
+        ):
             self.save_files()
 
     def del_word(self, *args):
@@ -788,7 +929,10 @@ class Editor(tk.Tk):
 
         invalid = [word for word in self.words if not self.is_len_valid(word)]
         if not invalid:
-            mb.showinfo("No invalid length words", f"All words are already between {bw.WORD_LENGTH_MIN} and {bw.WORD_LENGTH_MAX} letters long.")
+            mb.showinfo(
+                "No invalid length words",
+                f"All words are already between {bw.WORD_LENGTH_MIN} and {bw.WORD_LENGTH_MAX} letters long.",
+            )
             return
 
         for word in invalid:
@@ -800,7 +944,10 @@ class Editor(tk.Tk):
         # There are now unsaved changes
         self.unsaved_changes = True
 
-        if mb.askyesno("Invalid length words deleted", f"Found and deleted {len(invalid)} words of invalid length from the word list. Save changes to disk now?"):
+        if mb.askyesno(
+            "Invalid length words deleted",
+            f"Found and deleted {len(invalid)} words of invalid length from the word list. Save changes to disk now?",
+        ):
             self.save_files()
 
     def del_orphaned_defs(self):
@@ -812,11 +959,16 @@ class Editor(tk.Tk):
         """Find and delete any orphaned definitions"""
 
         self.busy_text = "Finding orphaned definitions..."
-        orphaned = [word for word in self.defs if bw.binary_search(self.words, word) is None]
+        orphaned = [
+            word for word in self.defs if bw.binary_search(self.words, word) is None
+        ]
 
         # No orphaned definitions found
         if not orphaned:
-            mb.showinfo("No orphaned definitions", "All recorded definitions have a word they are paired with.")
+            mb.showinfo(
+                "No orphaned definitions",
+                "All recorded definitions have a word they are paired with.",
+            )
             return
 
         # Delete the orphaned definitions
@@ -828,7 +980,10 @@ class Editor(tk.Tk):
         self.unsaved_changes = True
 
         # Offer to save changes
-        if mb.askyesno("Orphaned definitions deleted", f"Found and deleted {len(orphaned)} orphaned definitions. Save now?"):
+        if mb.askyesno(
+            "Orphaned definitions deleted",
+            f"Found and deleted {len(orphaned)} orphaned definitions. Save now?",
+        ):
             self.save_files()
 
     def auto_define(self):
@@ -858,18 +1013,29 @@ class Editor(tk.Tk):
         """Find all words below the usage threshold and try to define them"""
 
         if not bw.HAVE_WORDNET:
-            mb.showerror("No dictionary", "We need the NLTK wordnet English dictionary for auto-defining. Please connect to the internet, then restart the application.")
+            mb.showerror(
+                "No dictionary",
+                "We need the NLTK wordnet English dictionary for auto-defining. Please connect to the internet, then restart the application.",
+            )
             return
 
         # Find all words below the usage threshold and without a definition
         self.busy_text = "Finding undefined rare words..."
         defined_words = tuple(self.defs.keys())
-        words_to_define = [word for word in self.words if bw.get_word_usage(word) < bw.RARE_THRESH and bw.binary_search(defined_words, word) is None]
+        words_to_define = [
+            word
+            for word in self.words
+            if bw.get_word_usage(word) < bw.RARE_THRESH
+            and bw.binary_search(defined_words, word) is None
+        ]
         total = len(words_to_define)
 
         # Nothing to do?
         if not total:
-            mb.showinfo("No undefined rare words", "All words with a usage metric below the threshold already have a popdef.")
+            mb.showinfo(
+                "No undefined rare words",
+                "All words with a usage metric below the threshold already have a popdef.",
+            )
             return
 
         # Attempt to define all the words
@@ -886,19 +1052,31 @@ class Editor(tk.Tk):
         self.defs = dict(sorted(self.defs.items()))
 
         if fails == total:
-            mb.showerror("No definitions found", f"Failed to define any of the {total} undefined rare words found.")
+            mb.showerror(
+                "No definitions found",
+                f"Failed to define any of the {total} undefined rare words found.",
+            )
             return
 
         if fails:
-            mb.showwarning("Some definitions not found", f"Failed to define {fails} of the {total} undefined rare words found.")
+            mb.showwarning(
+                "Some definitions not found",
+                f"Failed to define {fails} of the {total} undefined rare words found.",
+            )
 
         else:
-            mb.showinfo("All rare words defined", f"Found and successfully auto-defined {total} previously undefined rare words.")
+            mb.showinfo(
+                "All rare words defined",
+                f"Found and successfully auto-defined {total} previously undefined rare words.",
+            )
 
         # There are now unsaved changes
         self.unsaved_changes = True
 
-        if mb.askyesno("Operation complete", f"Auto-defined {total - fails} words. Save changes to disk now?"):
+        if mb.askyesno(
+            "Operation complete",
+            f"Auto-defined {total - fails} words. Save changes to disk now?",
+        ):
             self.save_files()
 
 
