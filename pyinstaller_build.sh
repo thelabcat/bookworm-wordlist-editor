@@ -13,26 +13,29 @@
 # limitations under the License.
 
 echo "Preparing venv"
-python -m venv .venv
+python -m venv ./.venv
 
 echo "Activating venv"
 if [[ "$OSTYPE" == "linux-gnu"* ]] || [[ "$OSTYPE" == "cygwin" ]]; then
     # cygwin is POSIX compatibility layer and Linux environment emulation for Windows
-    source .venv/bin/activate
+    source ./.venv/bin/activate
 
 elif [[ "$OSTYPE" == "darwin"* ]]; then
     echo "WARNING: MacOS detected. Have not fully tested on MacOS."
-    source .venv/bin/activate
+    source ./.venv/bin/activate
 
 elif [[ "$OSTYPE" == "msys" ]]; then
     # Lightweight shell and GNU utilities compiled for Windows (part of MinGW)
     # Used by Git Bash
-    venv\Scripts\activate
+    source ./.venv/Scripts/activate
+
 elif [[ "$OSTYPE" == "freebsd"* ]]; then
     echo "WARNING: FreeBSD detected but not supported."
+    source ./.venv/bin/activate
+
 else
     echo "Could not detect operating system. Guessing UNIX."
-    source .venv/bin/activate
+    source ./.venv/bin/activate
 fi
 
 echo "Installing requirements"
