@@ -302,10 +302,10 @@ class Editor(tk.Tk):
         self.del_bttn.grid(row=4, columnspan=2, sticky=tk.NSEW)
         self.widgets_to_disable.append(self.del_bttn)
 
-        # Busy text that goes over everything
-        self.busy_displaytext = tk.StringVar(self)
-        self.busy_label = tk.Label(self, textvariable=self.busy_displaytext)
-        self.busy_label.grid(row=0, column=0, columnspan=2)
+        # Status display
+        self.status_displaytext = tk.StringVar(self)
+        self.status_label = tk.Label(self, textvariable=self.status_displaytext, anchor=tk.W, relief="sunken")
+        self.status_label.grid(row=1, column=0, columnspan=2, sticky=tk.EW)
 
     def thread_process(self, method: callable, message: str = "Working..."):
         """Run a method in a thread, and grey out the GUI until it's finished.
@@ -335,6 +335,11 @@ class Editor(tk.Tk):
         self.selection_updated()
 
     @property
+    def idle_status(self) -> str:
+        """The status text to display when no operations are running"""
+        return f"Ready. {len(self.words)} words. {len(self.defs)} popdefs."
+
+    @property
     def busy(self) -> bool:
         """Wether or not the program is busy"""
         return self.__busy
@@ -346,11 +351,9 @@ class Editor(tk.Tk):
         self.__busy = new
 
         if new:
-            self.busy_displaytext.set(self.busy_text)
-            self.busy_label.lift()
+            self.status_displaytext.set(self.busy_text)
         else:
-            self.busy_displaytext.set("")
-            self.busy_label.lower()
+            self.status_displaytext.set(self.idle_status)
 
         new_state = (tk.NORMAL, tk.DISABLED)[int(new)]
         for entry in self.menubar_entries:
@@ -372,7 +375,7 @@ class Editor(tk.Tk):
         self.__busy_text = new
         # If we are currently busy, display the new message
         if self.busy:
-            self.busy_displaytext.set(new)
+            self.status_displaytext.set(new)
 
     def unique_disable_handlers(self):
         """Run all unique widget disabling handlers"""
@@ -393,9 +396,12 @@ class Editor(tk.Tk):
         for button in (self.autodef_bttn, self.del_bttn):
             button.config(state=new_state)
 
-    def regulate_def_buttons(self, *args):
-        """Check if the definition has changed, and dis/en-able the reset and save buttons accordingly.
-        Includes dummy argument sink."""
+    def regulate_def_buttons(self, event=None):
+        """Check if the definition has changed.
+
+        Args:
+            event (object): Unused, receives Tkinter callback event data.
+                Defaults to None."""
 
         # Do not enable or disable these widgets if the GUI is busy
         if self.busy:
@@ -508,15 +514,14 @@ class Editor(tk.Tk):
         # The files were just (re)loaded, so there are no unsaved changes
         self.unsaved_changes = False
 
-    def save_files(self, *args, backup=False):
+    def save_files(self, event=None, backup=False):
         """Save the worldist and popdefs
 
         Args:
-            *args (object): Literally anything, dummy sink.
+            event (object): Unused, receives Tkinter callback event data.
+                Defaults to None.
             backup (bool): Wether or not to copy the original files to a backup name.
                 Defaults to False."""
-
-        # *args is there to receive unnecessary event data as this is a callback method
 
         # If we are in a thread, show progress
         self.busy_text = "Saving..."
@@ -552,10 +557,12 @@ class Editor(tk.Tk):
 
         self.unsaved_changes = False  # All changes are now saved
 
-    def selection_updated(self, *args):
-        """A new word has been selected, update everything"""
+    def selection_updated(self, event=None):
+        """A new word has been selected, update everything.
 
-        # *args is there to receive unnecessary event data as this is a callback method
+        Args:
+            event (object): Unused, receives Tkinter callback event data.
+                Defaults to None."""
 
         # Update what word is selected
         self.selected_word = self.get_selected_word()
@@ -581,10 +588,12 @@ class Editor(tk.Tk):
         # Enable or disable the word handling buttons based on the selection
         self.regulate_word_buttons()
 
-    def update_query(self, *args):
-        """Update the list of search results"""
+    def update_query(self, event=None):
+        """Update the list of search results
 
-        # *args is there to receive unnecessary event data as this is a callback method
+        Args:
+            event (object): Unused, receives Tkinter callback event data.
+                Defaults to None."""
 
         # Do not allow any capitalization or non-letters in the search field
         self.search.set(
@@ -908,8 +917,12 @@ class Editor(tk.Tk):
         ):
             self.save_files()
 
-    def del_word(self, *args):
-        """Delete the currently selected word"""
+    def del_word(self, event=None):
+        """Delete the currently selected word
+
+        Args:
+            event (object): Unused, receives Tkinter callback event data.
+                Defaults to None."""
 
         # No word is selected, so nothing to delete
         if self.selected_word == NO_WORD:

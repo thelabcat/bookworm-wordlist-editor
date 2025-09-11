@@ -26,7 +26,7 @@ import tkinter as tk
 OP_PATH = op.dirname(__file__)  # The path of the script file's containing folder
 
 PROGRAM_NAME = "BookWorm Deluxe Wordlist Editor"
-PROGRAM_VER = "1.8.1"
+PROGRAM_VER = "1.9.0"
 ICON_PATH = op.join(OP_PATH, "bookworm_wordlist_editor.png")
 LICENSE_NAME = "Apache License version 2.0"
 
