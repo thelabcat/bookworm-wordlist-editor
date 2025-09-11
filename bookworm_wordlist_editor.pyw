@@ -758,39 +758,44 @@ class Editor(tk.Tk):
         if not f:
             return
 
-        # Read and close the file
-        text = f.read().strip().lower()
+        # Read and close the file, splitting into words by whitespace
+        listed_words = f.read().strip().lower().split()
         f.close()
 
-        # filter file to only letters and spaces
-        self.busy_text = "Filtering to alphabet only..."
-        alpha_text = "".join((c for c in text if c.isalpha() or c.isspace()))
-
-        # There was no text besides non-alpha symbols
-        if not alpha_text:
-            mb.showerror("Invalid file", "File did not contain any alphabetic text.")
-            return
-
-        # Get all words, delimited by whitespace, in lowercase
-        add_words = alpha_text.split()
-
         # There were no words
-        if not add_words:
+        if not listed_words:
             mb.showerror("Invalid file", "Did not find any words in file.")
             return
+
+        # filter file to only alpha words
+        self.busy_text = "Filtering to alpha-only words..."
+        alpha_words = [word for word in listed_words if word.isalpha() or word.isspace()]
+        were_nonalpha = len(listed_words) - len(alpha_words)
+
+        # There was no text besides non-alpha symbols
+        if not alpha_words:
+            mb.showerror("Invalid file", "File did not contain any alpha-only words.")
+            return
+
+        # There were some non-alpha words
+        if were_nonalpha:
+            mb.showwarning(
+                "Some invalid words",
+                f"{were_nonalpha} words were rejected because they contained non-alpha characters.",
+                )
 
         # Filter to words we do not already have
         self.busy_text = "Filtering to only new words..."
         new_words = [
-            word for word in add_words if bw.binary_search(self.words, word) is None
+            word for word in alpha_words if bw.binary_search(self.words, word) is None
         ]
-        already_have = len(add_words) - len(new_words)
+        already_have = len(alpha_words) - len(new_words)
 
         # There were no words that we didn't already have
         if not new_words:
             mb.showinfo(
                 "Already have all words",
-                f"All {len(add_words)} words are already in the word list.",
+                f"All {len(alpha_words)} alpha-only words are already in the word list.",
             )
             return
 
