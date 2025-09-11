@@ -1,4 +1,4 @@
-# !/usr/bin/env python3
+#!/usr/bin/env python3
 """BookWorm Deluxe Wordlist Editor
 
 An application for editing the word list and popdefs in BookWorm Deluxe.
