@@ -77,6 +77,10 @@ class Editor(tk.Tk):
         self.iconphoto(True, tk.PhotoImage(file=info.ICON_PATH))  # Set the window icon
         self.build()
 
+        # Lock built size as minimum
+        self.update()
+        self.minsize(self.winfo_width(), self.winfo_height())
+
         # Load files
         self.game_path = bw.GAME_PATH_DEFAULT
         self.load_files(select=False, do_or_die=True)
