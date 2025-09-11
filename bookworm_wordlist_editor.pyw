@@ -207,7 +207,7 @@ class Editor(tk.Tk):
         self.search_label = tk.Label(self.search_frame, text="Search:")
         self.search_label.grid(row=0, column=0, sticky=tk.N + tk.S + tk.W)
         self.search = tk.StringVar()
-        self.search.trace_add("write", self.update_query)
+        self.search.trace_add("write", lambda *args: self.update_query())
         self.search_entry = tk.Entry(self.search_frame, textvariable=self.search)
         self.search_entry.grid(row=0, column=1, sticky=tk.NSEW)
         self.search_frame.columnconfigure(1, weight=1)
@@ -342,7 +342,7 @@ class Editor(tk.Tk):
     @property
     def idle_status(self) -> str:
         """The status text to display when no operations are running"""
-        return f"Ready. {len(self.words)} words. {len(self.defs)} popdefs."
+        return f"Ready. {len(self.words):,} words, {len(self.defs):,} popdefs {"(unsaved)" if self.unsaved_changes else ""}."
 
     @property
     def busy(self) -> bool:
@@ -598,12 +598,8 @@ class Editor(tk.Tk):
         # Enable or disable the word handling buttons based on the selection
         self.regulate_word_buttons()
 
-    def update_query(self, event=None):
-        """Update the list of search results
-
-        Args:
-            event (object): Unused, receives Tkinter callback event data.
-                Defaults to None."""
+    def update_query(self):
+        """Update the list of search results"""
 
         # Do not allow any capitalization or non-letters in the search field
         self.search.set(
@@ -1049,7 +1045,7 @@ class Editor(tk.Tk):
         if not bw.HAVE_WORDNET:
             mb.showerror(
                 "No dictionary",
-                "We need the NLTK wordnet English dictionary for auto-defining. Please connect to the internet, then restart the application.",
+                "We need to download the NLTK wordnet English dictionary for auto-defining. Please connect to the internet, then restart the application.",
             )
             return
 
@@ -1096,12 +1092,6 @@ class Editor(tk.Tk):
             mb.showwarning(
                 "Some definitions not found",
                 f"Failed to define {fails} of the {total} undefined rare words found.",
-            )
-
-        else:
-            mb.showinfo(
-                "All rare words defined",
-                f"Found and successfully auto-defined {total} previously undefined rare words.",
             )
 
         # There are now unsaved changes
