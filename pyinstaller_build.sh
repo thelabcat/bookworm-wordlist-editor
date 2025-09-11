@@ -18,23 +18,28 @@ python -m venv ./.venv
 echo "Activating venv"
 if [[ "$OSTYPE" == "linux-gnu"* ]] || [[ "$OSTYPE" == "cygwin" ]]; then
     # cygwin is POSIX compatibility layer and Linux environment emulation for Windows
+    os_suffix="linux"
     source ./.venv/bin/activate
 
 elif [[ "$OSTYPE" == "darwin"* ]]; then
     echo "WARNING: MacOS detected. Have not fully tested on MacOS."
+    os_suffix="macos"
     source ./.venv/bin/activate
 
 elif [[ "$OSTYPE" == "msys" ]]; then
     # Lightweight shell and GNU utilities compiled for Windows (part of MinGW)
     # Used by Git Bash
+    os_suffix="win"
     source ./.venv/Scripts/activate
 
 elif [[ "$OSTYPE" == "freebsd"* ]]; then
     echo "WARNING: FreeBSD detected but not supported."
+    os_suffix="freebsd"
     source ./.venv/bin/activate
 
 else
     echo "Could not detect operating system. Guessing UNIX."
+    os_suffix="unknown"
     source ./.venv/bin/activate
 fi
 
@@ -46,7 +51,7 @@ echo "Updating the English word frequency list"
 curl https://raw.githubusercontent.com/rspeer/wordfreq/master/wordfreq/data/large_en.msgpack.gz -o large_en.msgpack.gz
 
 echo "Building exe"
-pyinstaller -F --icon=bookworm_wordlist_editor.ico --add-data bookworm_wordlist_editor.png:. --add-data large_en.msgpack.gz:wordfreq/data/ bookworm_wordlist_editor.pyw 2>&1 | tee pyinstaller_build_log.txt
+pyinstaller -F --icon=bookworm_wordlist_editor.ico --add-data bookworm_wordlist_editor.png:. --add-data large_en.msgpack.gz:wordfreq/data/ --name "bookworm_wordlist_editor-$os_suffix-$(uname -m)" bookworm_wordlist_editor.pyw 2>&1 | tee pyinstaller_build_log.txt
 
 echo "Cleaning up exe build residue"
 rm -rf build
