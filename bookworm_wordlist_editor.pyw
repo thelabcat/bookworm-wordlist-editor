@@ -108,6 +108,9 @@ class Editor(tk.Tk):
         # Set the window title based on wether changes are saved or not
         self.title((WINDOW_TITLE, UNSAVED_WINDOW_TITLE)[int(new_value)])
 
+        # Make sure the status footer is up-to-date with any new changes
+        self.update_idle_status()
+
     def on_closing(self):
         """What to do if the user clicks to close this window"""
 
@@ -304,7 +307,9 @@ class Editor(tk.Tk):
 
         # Status display
         self.status_displaytext = tk.StringVar(self)
-        self.status_label = tk.Label(self, textvariable=self.status_displaytext, anchor=tk.W, relief="sunken")
+        self.status_label = tk.Label(
+            self, textvariable=self.status_displaytext, anchor=tk.W, relief="sunken"
+        )
         self.status_label.grid(row=1, column=0, columnspan=2, sticky=tk.EW)
 
     def thread_process(self, method: callable, message: str = "Working..."):
@@ -352,8 +357,8 @@ class Editor(tk.Tk):
 
         if new:
             self.status_displaytext.set(self.busy_text)
-        else:
-            self.status_displaytext.set(self.idle_status)
+
+        self.update_idle_status()
 
         new_state = (tk.NORMAL, tk.DISABLED)[int(new)]
         for entry in self.menubar_entries:
@@ -376,6 +381,11 @@ class Editor(tk.Tk):
         # If we are currently busy, display the new message
         if self.busy:
             self.status_displaytext.set(new)
+
+    def update_idle_status(self):
+        """If we are currently idle, refresh the idle status message"""
+        if not self.busy:
+            self.status_displaytext.set(self.idle_status)
 
     def unique_disable_handlers(self):
         """Run all unique widget disabling handlers"""
@@ -778,7 +788,9 @@ class Editor(tk.Tk):
 
         # filter file to only alpha words
         self.busy_text = "Filtering to alpha-only words..."
-        alpha_words = [word for word in listed_words if word.isalpha() or word.isspace()]
+        alpha_words = [
+            word for word in listed_words if word.isalpha() or word.isspace()
+        ]
         were_nonalpha = len(listed_words) - len(alpha_words)
 
         # There was no text besides non-alpha symbols
@@ -791,7 +803,7 @@ class Editor(tk.Tk):
             mb.showwarning(
                 "Some invalid words",
                 f"{were_nonalpha} words were rejected because they contained non-alpha characters.",
-                )
+            )
 
         # Filter to words we do not already have
         self.busy_text = "Filtering to only new words..."
