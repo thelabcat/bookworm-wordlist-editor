@@ -342,7 +342,7 @@ class Editor(tk.Tk):
     @property
     def idle_status(self) -> str:
         """The status text to display when no operations are running"""
-        return f"Ready. {len(self.words):,} words, {len(self.defs):,} popdefs {"(unsaved)" if self.unsaved_changes else ""}."
+        return f"Ready. {len(self.words):,} words. {len(self.defs):,} popdefs {"(unsaved)" if self.unsaved_changes else ""}."
 
     @property
     def busy(self) -> bool:
