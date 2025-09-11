@@ -71,9 +71,7 @@ class AboutDialogue(tk.Toplevel):
 
         # Program icon
         self.icon = tk.PhotoImage(file=ICON_PATH)
-        tk.Label(self, image=self.icon).grid(
-            row=1, padx=10, pady=3
-        )
+        tk.Label(self, image=self.icon).grid(row=1, padx=10, pady=3)
         self.rowconfigure(1, weight=1)
 
         # License info
@@ -109,5 +107,6 @@ class AboutDialogue(tk.Toplevel):
 
 
 if __name__ == "__main__":
-    print("Not meant to run on its own!")
+    print("This module is should only be run on its own for debugging.")
+    print("Spawning About dialogue")
     AboutDialogue()
