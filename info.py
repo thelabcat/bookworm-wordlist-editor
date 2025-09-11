@@ -55,24 +55,30 @@ class AboutDialogue(tk.Toplevel):
         self.title("About")
 
         self.build()
+
+        # Lock built size as minimum
+        self.update()
+        self.minsize(self.winfo_width(), self.winfo_height())
+
         self.mainloop()
 
     def build(self):
         """Construct the GUI"""
         # Program name and version
-        tk.Label(self, text=" ".join((PROGRAM_NAME, PROGRAM_VER))).grid(
+        tk.Label(self, text=PROGRAM_NAME + "\nVersion " + PROGRAM_VER).grid(
             row=0, padx=10, pady=10
         )
 
         # Program icon
-        tk.Label(self, image=tk.PhotoImage(file=ICON_PATH)).grid(
-            row=1, padx=10, pady=10
+        self.icon = tk.PhotoImage(file=ICON_PATH)
+        tk.Label(self, image=self.icon).grid(
+            row=1, padx=10, pady=3
         )
         self.rowconfigure(1, weight=1)
 
         # License info
         self.license_frame = tk.Frame(self)
-        self.license_frame.grid(row=2, sticky=tk.EW, padx=10, pady=10)
+        self.license_frame.grid(row=2, sticky=tk.EW, padx=10, pady=5)
 
         tk.Label(self.license_frame, text="Licensed under ").grid(
             row=0, column=0, sticky=tk.E
@@ -80,7 +86,7 @@ class AboutDialogue(tk.Toplevel):
 
         self.license_link = tk.Label(
             self.license_frame,
-            text=LICENSE_NAME + ".",
+            text=LICENSE_NAME,
             cursor="hand2",
             foreground="blue",
         )
@@ -93,7 +99,7 @@ class AboutDialogue(tk.Toplevel):
         self.homepage_link = tk.Label(
             self, text="Project Homepage", cursor="hand2", foreground="blue"
         )
-        self.homepage_link.grid(row=3, sticky=tk.EW, padx=10, pady=3)
+        self.homepage_link.grid(row=3, sticky=tk.EW, padx=10, pady=5)
         self.homepage_link.bind("<Button-1>", lambda e: webbrowser.open(URL.homepage))
 
         # Ok button
