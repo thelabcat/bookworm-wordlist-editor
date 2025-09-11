@@ -100,8 +100,11 @@ class AboutDialogue(tk.Toplevel):
         self.homepage_link.grid(row=3, sticky=tk.EW, padx=10, pady=5)
         self.homepage_link.bind("<Button-1>", lambda e: webbrowser.open(URL.homepage))
 
+        # Credit to Whom it is always due
+        tk.Label(self, text="S.D.G.").grid(row=4, padx=10, pady=10)
+
         # Ok button
-        tk.Button(self, text="Ok", command=self.destroy).grid(row=4, padx=10, pady=10)
+        tk.Button(self, text="Ok", command=self.destroy).grid(row=5, padx=10, pady=10)
 
         self.columnconfigure(0, weight=1)
 
