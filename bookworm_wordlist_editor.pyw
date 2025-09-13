@@ -37,6 +37,19 @@ OP_PATH = op.dirname(__file__)  # The path of the script file's containing folde
 
 BACKUP_SUFFIX = ".bak"  # Suffix for backup files
 
+# Allow system environment variable to override normal default for game path
+ENV_GAME_PATH = os.environ.get("BOOKWORM_GAME_PATH")
+if ENV_GAME_PATH:
+    if op.exists(ENV_GAME_PATH):
+        print("System set game path default to", ENV_GAME_PATH)
+        GAME_PATH_DEFAULT = ENV_GAME_PATH
+    else:
+        print("System tried to set game path default to", ENV_GAME_PATH, "but it does not exist.")
+        GAME_PATH_DEFAULT = bw.GAME_PATH_DEFAULT
+
+else:
+    GAME_PATH_DEFAULT = bw.GAME_PATH_DEFAULT
+
 # Miscellanious GUI settings
 WINDOW_TITLE = info.PROGRAM_NAME
 UNSAVED_WINDOW_TITLE = (
@@ -82,7 +95,7 @@ class Editor(tk.Tk):
         self.minsize(self.winfo_width(), self.winfo_height())
 
         # Load files
-        self.game_path = bw.GAME_PATH_DEFAULT
+        self.game_path = GAME_PATH_DEFAULT
         self.load_files(select=False, do_or_die=True)
 
         # Start the GUI loop
