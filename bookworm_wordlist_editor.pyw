@@ -37,6 +37,9 @@ OP_PATH = op.dirname(__file__)  # The path of the script file's containing folde
 
 BACKUP_SUFFIX = ".bak"  # Suffix for backup files
 
+# Tkinter file dialog types filter for plain text files
+TEXT_FILETYPE = [("Plain text", ".txt")]
+
 # Allow system environment variable to override normal default for game path
 ENV_GAME_PATH = os.environ.get("BOOKWORM_GAME_PATH")
 if ENV_GAME_PATH:
@@ -72,9 +75,6 @@ class Editor(tk.Tk):
         # The word list and definitions dictionary
         self.words = []
         self.defs = {}
-
-        # Whatever word is selected
-        self.selected_word = NO_WORD
 
         self.thread = None  # Any thread the GUI might spawn
 
@@ -114,8 +114,7 @@ class Editor(tk.Tk):
         Args:
             new_value (bool): Setting if changes are currently unsaved"""
 
-        if not isinstance(new_value, bool):
-            raise TypeError("Value for unsaved changes must be bool")
+        assert isinstance(new_value, bool), "Value for unsaved changes must be bool"
         self.__unsaved_changes = new_value
 
         # Set the window title based on wether changes are saved or not
@@ -492,11 +491,11 @@ class Editor(tk.Tk):
                 response = filedialog.askdirectory(
                     title="Game directory", initialdir=self.game_path
                 )
-                if response:
+                if isinstance(response, str):
                     break  # We got a response, so break the loop
 
                 if not do_or_die:
-                    return  # We did not get a response, but we aren't supposed to force. Assumes the game is not installed to root directory.
+                    return  # We did not get a response, but we aren't supposed to force.
 
                 if mb.askyesno(
                     "Cannot cancel",
@@ -505,9 +504,8 @@ class Editor(tk.Tk):
                     self.destroy()
                     sys.exit()
 
-            select = not bw.is_game_path_valid(
-                response + os.sep
-            )  # If the game path is valid, we are no longer selecting
+            # If the game path is valid, we are no longer selecting
+            select = not bw.is_game_path_valid(response)
             if select:
                 mb.showerror(
                     "Invalid directory",
@@ -587,9 +585,6 @@ class Editor(tk.Tk):
             event (object): Unused, receives Tkinter callback event data.
                 Defaults to None."""
 
-        # Update what word is selected
-        self.selected_word = self.get_selected_word()
-
         self.word_display.config(text=self.selected_word)  # Display the current word
         self.load_definition()  # Load and display the current definition
 
@@ -597,16 +592,13 @@ class Editor(tk.Tk):
         if self.selected_word == NO_WORD:
             self.usage_display.config(text="")
 
-        # Otherwise, try to load and display usage statistics
+        # Otherwise, load and display usage statistics
         else:
-            try:
-                usage = bw.get_word_usage(self.selected_word)
-                self.usage_display.config(
-                    text=WORDFREQ_DISP_PREFIX + str(usage),
-                    fg=RARE_COLS[int(usage < bw.RARE_THRESH)],
-                )
-            except LookupError:
-                print("Usage lookup faliure. See issue  # 5.")
+            usage = bw.get_word_usage(self.selected_word)
+            self.usage_display.config(
+                text=WORDFREQ_DISP_PREFIX + str(usage),
+                fg=RARE_COLS[int(usage < bw.RARE_THRESH)],
+            )
 
         # Enable or disable the word handling buttons based on the selection
         self.regulate_word_buttons()
@@ -616,7 +608,7 @@ class Editor(tk.Tk):
 
         # Do not allow any capitalization or non-letters in the search field
         self.search.set(
-            "".join([char for char in self.search.get().lower() if char in bw.ALPHABET])
+            "".join([char for char in self.search.get().lower() if char.isalpha()])
         )
 
         search = self.search.get()
@@ -624,7 +616,7 @@ class Editor(tk.Tk):
         # Comprehensively filter the wordlist to only matching words
         if search:
             query = [word for word in self.words if search in word]
-            # Sort search results by how close the search query is to the beginning
+            # Sort search results primarily by how close the search query is to the beginning
             query.sort(key=lambda x: x.index(search))
 
         # The search was cleared
@@ -636,14 +628,15 @@ class Editor(tk.Tk):
 
         # There was a search entered, and it returned values, highlight the top result
         if search and query:
-            self.set_selected_word(query[0])
+            self.selected_word = query[0]
 
         # The search was cleared or returned no search results
         else:
-            self.set_selected_word(None)
+            self.selected_word = NO_WORD
 
-    def get_selected_word(self):
-        """Get the currently selected word
+    @property
+    def selected_word(self):
+        """The currently selected word
 
         Returns:
             word (str): Either the curently selected word or NO_WORD."""
@@ -654,12 +647,16 @@ class Editor(tk.Tk):
             return self.query_box.get(self.query_box.curselection()[0])
         return NO_WORD
 
-    def set_selected_word(self, word: str):
+    @selected_word.setter
+    def selected_word(self, word: str):
         """Change what word is selected. If the given word is not in the
         current query, quietly clear the current selection.
 
         Args:
             word (str): The word to try and select."""
+
+        if word == NO_WORD:
+            word = ""
 
         # The word is in our current query, so select and view it
         if word and word in self.query_list.get():
@@ -697,7 +694,7 @@ class Editor(tk.Tk):
             self.defs[self.selected_word] = def_entry
 
         # We had a definition, and it has been deleted
-        elif self.selected_word in self.defs.keys():
+        elif self.defs.get(self.selected_word) is not None:
             del self.defs[self.selected_word]
 
         # There are now unsaved changes
@@ -720,14 +717,14 @@ class Editor(tk.Tk):
         Returns:
             result (bool): Is the word of valud length?"""
 
-        if notify and not bw.WORD_LENGTH_MIN <= len(word) <= bw.WORD_LENGTH_MAX:
+        if not (valid := bw.WORD_LENGTH_MIN <= len(word) <= bw.WORD_LENGTH_MAX) and notify:
             # Dialog auto-selects the word "short" or "long" based on wether the invalid length was a too long case or not
             mb.showerror(
                 "Word is too " + ("short", "long")[int(len(word) > bw.WORD_LENGTH_MAX)],
-                f"Word must be between {bw.WORD_LENGTH_MIN} and {bw.WORD_LENGTH_MAX} letters long.",
+                f"Word must be between {bw.WORD_LENGTH_MIN:,} and {bw.WORD_LENGTH_MAX:,} letters long.",
             )
 
-        return bw.WORD_LENGTH_MIN <= len(word) <= bw.WORD_LENGTH_MAX
+        return valid
 
     def add_word(self):
         """Create a new word entry"""
@@ -762,11 +759,52 @@ class Editor(tk.Tk):
 
         else:
             mb.showinfo(
-                "Already have word", f"The word {new} is already in the word list."
+                "Already have word", f"The word '{new}' is already in the word list."
             )
 
-        # Highlight and scroll to the new word even if it wasn't actually new, so long as it is in our current search results
-        self.set_selected_word(new)
+        # Highlight and scroll to the new word even if it wasn't actually new,
+        # so long as it is in our current search results.
+        self.selected_word = new
+
+    def __read_alpha_words(self, f):
+        """Read alphabetical words from a human-readable list file and then
+            close it, doing GUI status stuff in the process.
+
+        Args:
+            f: The open file-like object to be read.
+
+        Returns:
+            words (list): The list of alpha-only words from the file."""
+
+        # Read and close the file, splitting into words by whitespace
+        listed_words = f.read().strip().lower().split()
+        f.close()
+
+        # There were no words
+        if not listed_words:
+            mb.showerror("Invalid file", "Did not find any words in file.")
+            return []
+
+        # filter file to only alpha words
+        self.busy_text = "Filtering to alpha-only words..."
+        alpha_words = [
+            word for word in listed_words if word.isalpha() or word.isspace()
+        ]
+        were_nonalpha = len(listed_words) - len(alpha_words)
+
+        # There was no text besides non-alpha symbols
+        if not alpha_words:
+            mb.showerror("Invalid file", "File did not contain any alpha-only words.")
+            return []
+
+        # There were some non-alpha words
+        if were_nonalpha:
+            mb.showwarning(
+                "Some invalid words",
+                f"{were_nonalpha:,} words were rejected because they contained non-alpha characters.",
+            )
+
+        return alpha_words
 
     def mass_add_words(self):
         """Add a whole file's list of words (threaded)"""
@@ -779,40 +817,16 @@ class Editor(tk.Tk):
         # Open and read a file with a human-readable list of new words
         f = filedialog.askopenfile(
             title="Select human-readable list of words",
-            filetypes=[("Plain text", "*.txt")],
+            filetypes=TEXT_FILETYPE,
         )
 
         # The user cancelled via the open file dialog
         if not f:
             return
 
-        # Read and close the file, splitting into words by whitespace
-        listed_words = f.read().strip().lower().split()
-        f.close()
-
-        # There were no words
-        if not listed_words:
-            mb.showerror("Invalid file", "Did not find any words in file.")
-            return
-
-        # filter file to only alpha words
-        self.busy_text = "Filtering to alpha-only words..."
-        alpha_words = [
-            word for word in listed_words if word.isalpha() or word.isspace()
-        ]
-        were_nonalpha = len(listed_words) - len(alpha_words)
-
-        # There was no text besides non-alpha symbols
+        alpha_words = self.__read_alpha_words(f)
         if not alpha_words:
-            mb.showerror("Invalid file", "File did not contain any alpha-only words.")
             return
-
-        # There were some non-alpha words
-        if were_nonalpha:
-            mb.showwarning(
-                "Some invalid words",
-                f"{were_nonalpha} words were rejected because they contained non-alpha characters.",
-            )
 
         # Filter to words we do not already have
         self.busy_text = "Filtering to only new words..."
@@ -825,7 +839,7 @@ class Editor(tk.Tk):
         if not new_words:
             mb.showinfo(
                 "Already have all words",
-                f"All {len(alpha_words)} alpha-only words are already in the word list.",
+                f"All {len(alpha_words):,} alpha-only words are already in the word list.",
             )
             return
 
@@ -845,7 +859,7 @@ class Editor(tk.Tk):
         if not new_lenvalid_words:
             mb.showerror(
                 "Invalid word lengths",
-                f"All {len(new_words)} new words were rejected because they were not between {bw.WORD_LENGTH_MIN} and {bw.WORD_LENGTH_MAX} letters long.",
+                f"All {len(new_words):,} new words were rejected because they were not between {bw.WORD_LENGTH_MIN:,} and {bw.WORD_LENGTH_MAX:,} letters long.",
             )
             return
 
@@ -853,7 +867,7 @@ class Editor(tk.Tk):
         if len_invalid:
             mb.showinfo(
                 "Some invalid word lengths",
-                f"{len_invalid} words were rejected because they were not between {bw.WORD_LENGTH_MIN} and {bw.WORD_LENGTH_MAX} letters long.",
+                f"{len_invalid:,} words were rejected because they were not between {bw.WORD_LENGTH_MIN:,} and {bw.WORD_LENGTH_MAX:,} letters long.",
             )
 
         # Add the new words
@@ -869,7 +883,7 @@ class Editor(tk.Tk):
 
         if mb.askyesno(
             "Words added",
-            f"Added {len(new_lenvalid_words)} new words to the word list. Save changes to disk now?",
+            f"Added {len(new_lenvalid_words):,} new words to the word list. Save changes to disk now?",
         ):
             self.save_files()
 
@@ -883,25 +897,13 @@ class Editor(tk.Tk):
 
         f = filedialog.askopenfile(
             title="Select human-readable list of words",
-            filetypes=[("Plain text", "*.txt")],
+            filetypes=TEXT_FILETYPE,
         )
         if not f:  # The user cancelled
             return
-        text = f.read().strip().lower()
-        f.close()
 
-        # Filter text to alphabet and whitespace
-        self.busy_text = "Filtering to alphabet only..."
-        alpha_text = "".join((c for c in text if c.isalpha() or c.isspace()))
-        if not alpha_text:
-            mb.showerror("Invalid file", "File did not contain any alphabetic text.")
-            return
-
-        del_words = (
-            alpha_text.split()
-        )  # Get all words, delimited by whitespace, in lowercase
+        del_words = self.__read_alpha_words(f)
         if not del_words:
-            mb.showerror("Invalid file", "Did not find any words in file.")
             return
 
         self.busy_text = "Finding words we do have..."
@@ -912,7 +914,7 @@ class Editor(tk.Tk):
         if not old_words:
             mb.showinfo(
                 "Don't have any of the words",
-                f"None of the {len(del_words)} words are in the word list.",
+                f"None of the {len(del_words):,} words are in the word list.",
             )
             return
 
@@ -924,7 +926,7 @@ class Editor(tk.Tk):
 
         self.busy_text = "Deleting..."
         for word in old_words:
-            self.words.remove(word)
+            self.__delete_word(word)
 
         # Update the query display
         self.update_query()
@@ -934,7 +936,7 @@ class Editor(tk.Tk):
 
         if mb.askyesno(
             "Words deleted",
-            f"Removed {len(old_words)} words from the word list. Save changes to disk now?",
+            f"Removed {len(old_words):,} words from the word list. Save changes to disk now?",
         ):
             self.save_files()
 
@@ -949,18 +951,24 @@ class Editor(tk.Tk):
         if self.selected_word == NO_WORD:
             return
 
-        # Remove the word from our words list
-        self.words.remove(self.selected_word)
-
-        # If we have a definition saved for this word, delete it
-        if self.selected_word in self.defs.keys():
-            del self.defs[self.selected_word]
+        # Actually do the deleting
+        self.__delete_word(self.selected_word)
 
         # Refresh the query list
         self.update_query()
 
         # There are now unsaved changes
         self.unsaved_changes = True
+
+    def __delete_word(self, word: str):
+        """Delete a word from our wordlist and popdefs
+
+        Args:
+            word (str): The word to delete (must actually be in the wordlist)"""
+
+        self.words.remove(word)
+        if self.defs.get(word) is not None:
+            del self.defs[word]
 
     def del_invalid_len_words(self):
         """Remove all words of invalid length from the wordlist (threaded)"""
@@ -974,12 +982,12 @@ class Editor(tk.Tk):
         if not invalid:
             mb.showinfo(
                 "No invalid length words",
-                f"All words are already between {bw.WORD_LENGTH_MIN} and {bw.WORD_LENGTH_MAX} letters long.",
+                f"All words are already between {bw.WORD_LENGTH_MIN:,} and {bw.WORD_LENGTH_MAX:,} letters long.",
             )
             return
 
         for word in invalid:
-            self.words.remove(word)
+            self.__delete_word(word)
 
         # Update the query display
         self.update_query()
@@ -989,7 +997,7 @@ class Editor(tk.Tk):
 
         if mb.askyesno(
             "Invalid length words deleted",
-            f"Found and deleted {len(invalid)} words of invalid length from the word list. Save changes to disk now?",
+            f"Found and deleted {len(invalid):,} words of invalid length from the word list. Save changes to disk now?",
         ):
             self.save_files()
 
@@ -1025,7 +1033,7 @@ class Editor(tk.Tk):
         # Offer to save changes
         if mb.askyesno(
             "Orphaned definitions deleted",
-            f"Found and deleted {len(orphaned)} orphaned definitions. Save now?",
+            f"Found and deleted {len(orphaned):,} orphaned definitions. Save now?",
         ):
             self.save_files()
 
@@ -1082,7 +1090,7 @@ class Editor(tk.Tk):
             return
 
         # Attempt to define all the words
-        self.busy_text = f"Auto-defining {total} words..."
+        self.busy_text = f"Auto-defining {total:,} words..."
         fails = 0
         for word in words_to_define:
             result, success = bw.build_auto_def(word)
@@ -1097,14 +1105,14 @@ class Editor(tk.Tk):
         if fails == total:
             mb.showerror(
                 "No definitions found",
-                f"Failed to define any of the {total} undefined rare words found.",
+                f"Failed to define any of the {total:,} undefined rare words found.",
             )
             return
 
         if fails:
             mb.showwarning(
                 "Some definitions not found",
-                f"Failed to define {fails} of the {total} undefined rare words found.",
+                f"Failed to define {fails:,} of the {total:,} undefined rare words found.",
             )
 
         # There are now unsaved changes
@@ -1112,7 +1120,7 @@ class Editor(tk.Tk):
 
         if mb.askyesno(
             "Operation complete",
-            f"Auto-defined {total - fails} words. Save changes to disk now?",
+            f"Auto-defined {total - fails:,} words. Save changes to disk now?",
         ):
             self.save_files()
 
