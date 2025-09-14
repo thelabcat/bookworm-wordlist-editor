@@ -28,6 +28,7 @@ import tkinter as tk
 from tkinter import messagebox as mb
 from tkinter import simpledialog as dialog
 from tkinter import filedialog
+import time
 import webbrowser
 import bookworm_utils as bw
 import info
@@ -102,8 +103,9 @@ class Editor(tk.Tk):
         self.__unsaved_changes = False
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
 
-        self.title(WINDOW_TITLE)  # Set the window title
-        self.iconphoto(True, tk.PhotoImage(file=info.ICON_PATH))  # Set the window icon
+        # Make the GUI
+        self.title(WINDOW_TITLE)
+        self.iconphoto(True, tk.PhotoImage(file=info.ICON_PATH))
         self.build()
 
         # Lock built size as minimum
@@ -233,23 +235,26 @@ class Editor(tk.Tk):
         self.search_frame.grid(row=0, columnspan=2, sticky=tk.NSEW)
 
         # Search system
-        self.search_label = tk.Label(self.search_frame, text="Search:")
-        self.search_label.grid(row=0, column=0, sticky=tk.N + tk.S + tk.W)
+        self.search_label = tk.Label(self.search_frame, text="Search:", anchor=tk.W)
+        self.search_label.grid(row=0, column=0, sticky=tk.NSEW)
+
         self.search = tk.StringVar()
         self.search.trace_add("write", lambda *args: self.update_query())
         self.search_entry = tk.Entry(self.search_frame, textvariable=self.search)
         self.search_entry.grid(row=0, column=1, sticky=tk.NSEW)
         self.search_frame.columnconfigure(1, weight=1)
+
         self.search_clear_bttn = tk.Button(
             self.search_frame, text="X", command=lambda: self.search.set("")
         )
-        self.search_clear_bttn.grid(row=0, column=2, sticky=tk.N + tk.S + tk.E)
+        self.search_clear_bttn.grid(row=0, column=2, sticky=tk.NSEW)
         self.widgets_to_disable += [
             self.search_label,
             self.search_entry,
             self.search_clear_bttn,
         ]
 
+        # Word list display
         self.query_list = tk.Variable(value=["foo", "bar", "bazz"])
         self.query_box = tk.Listbox(
             self.list_frame,
@@ -269,15 +274,16 @@ class Editor(tk.Tk):
         self.query_box_scrollbar.grid(row=1, column=1, sticky=tk.N + tk.S + tk.E)
         # self.widgets_to_disable.append(self.query_box_scrollbar)  # Scrollbar cannot be state disabled
         self.list_frame.rowconfigure(1, weight=1)
-        self.list_frame.columnconfigure(0, weight=1)
 
+        # Button to add a word
         self.add_word_bttn = tk.Button(
             self.list_frame, text="Add word", command=self.add_word
         )
         self.add_word_bttn.grid(row=2, columnspan=2, sticky=tk.NSEW)
         self.widgets_to_disable.append(self.add_word_bttn)
+        self.list_frame.columnconfigure(0, weight=1)
 
-        # Frame for word and definition
+        # Right-hand pane, for single word edit functions
         self.worddef_frame = tk.Frame(self)
         self.worddef_frame.grid(row=0, column=1, sticky=tk.NSEW)
         self.worddef_frame.bind_all("<Key>", self.regulate_def_buttons)
@@ -285,19 +291,22 @@ class Editor(tk.Tk):
 
         # Subframe for word and usage display
         self.worddisp_frame = tk.Frame(self.worddef_frame)
-        self.worddisp_frame.grid(row=0, columnspan=2, sticky=tk.E + tk.W)
+        self.worddisp_frame.grid(row=0, columnspan=2, sticky=tk.NSEW)
         self.worddef_frame.columnconfigure(0, weight=1)
         self.worddef_frame.columnconfigure(1, weight=1)
 
+        # Display the currently selected word
         self.word_display = tk.Label(self.worddisp_frame, text=NO_WORD)
-        self.word_display.grid(row=0, column=0, sticky=tk.E + tk.W)
+        self.word_display.grid(row=0, column=0, sticky=tk.NSEW)
         self.widgets_to_disable.append(self.word_display)
         self.worddisp_frame.columnconfigure(0, weight=1)
 
-        self.usage_display = tk.Label(self.worddisp_frame, text="")
-        self.usage_display.grid(row=0, column=1, sticky=tk.E)
+        # Display how often that word is used
+        self.usage_display = tk.Label(self.worddisp_frame, text="", anchor=tk.E)
+        self.usage_display.grid(row=0, column=1, sticky=tk.NSEW)
         self.widgets_to_disable.append(self.usage_display)
 
+        # Allow editing of the popdef for the word
         self.def_field = tk.Text(
             self.worddef_frame,
             width=DEFFIELD_SIZE[0],
@@ -334,7 +343,7 @@ class Editor(tk.Tk):
         self.del_bttn.grid(row=4, columnspan=2, sticky=tk.NSEW)
         self.widgets_to_disable.append(self.del_bttn)
 
-        # Status display
+        # Status display footer
         self.status_displaytext = tk.StringVar(self)
         self.status_label = tk.Label(
             self, textvariable=self.status_displaytext, anchor=tk.W, relief="sunken"
@@ -365,7 +374,7 @@ class Editor(tk.Tk):
         method()
         self.busy = False
 
-        # If the current selected word was auto-defined, we want to show its new definitoon
+        # The currently selected word may have had changes made
         self.selection_updated()
 
     @property
@@ -387,8 +396,10 @@ class Editor(tk.Tk):
         if new:
             self.status_displaytext.set(self.busy_text)
 
+        # Has its own check for current busy state, safe to run regardless
         self.update_idle_status()
 
+        # Enable or disable all the widgets
         new_state = (tk.NORMAL, tk.DISABLED)[int(new)]
         for entry in self.menubar_entries:
             self.menubar.entryconfig(entry, state=new_state)
@@ -423,7 +434,8 @@ class Editor(tk.Tk):
         self.regulate_def_buttons()
 
     def regulate_word_buttons(self):
-        """Enable or disable the word handling buttons based on if a word is selected"""
+        """Enable or disable the word handling buttons based on if a word is
+            selected"""
 
         # Do not enable or disable these widgets if the GUI is busy
         if self.busy:
@@ -436,7 +448,8 @@ class Editor(tk.Tk):
             button.config(state=new_state)
 
     def regulate_def_buttons(self, event=None):
-        """Check if the definition has changed.
+        """Check if the definition has changed, and regulate the reset / save
+            def buttons accordingly.
 
         Args:
             event (object): Unused, receives Tkinter callback event data.
@@ -446,7 +459,8 @@ class Editor(tk.Tk):
         if self.busy:
             return
 
-        def_entry = self.def_field.get("0.0", tk.END).strip()  # Get the current entry
+        # Get the current entry
+        def_entry = self.def_field.get("0.0", tk.END).strip()
 
         # There is no selected word
         if self.selected_word == NO_WORD:
@@ -474,8 +488,19 @@ class Editor(tk.Tk):
         else:
             new_state = tk.DISABLED
 
+        # Enable or disable the buttons appropriately
         for button in (self.reset_def_bttn, self.save_def_bttn):
             button.config(state=new_state)
+
+    @property
+    def wordlist_abs_path(self):
+        """The absolute path of the wordlist file"""
+        return op.join(self.game_path, bw.WORDLIST_FILE)
+
+    @property
+    def popdefs_abs_path(self):
+        """The absolute path of the popdefs file"""
+        return op.join(self.game_path, bw.POPDEFS_FILE)
 
     def load_files(self, select: bool = True, do_or_die: bool = False):
         """Load the wordlist and the popdefs (threaded)
@@ -494,12 +519,14 @@ class Editor(tk.Tk):
         """Load the wordlist and the popdefs
 
         Args:
-            select (bool): Wether or not we need to prompt the user to select a new path.
+            select (bool): Wether or not we need to prompt the user to select a
+                new path.
                 Defaults to True.
-            do_or_die(bool): Wether or not cancelling is not an option.
+            do_or_die (bool): Wether or not cancelling is not an option.
                 Defaults to False, cancelling is an option."""
 
-        # Ask the user for a directory if the current one is invalid, even if the select argument is false
+        # Ask the user for a directory if the current one is invalid, even if
+        # the select argument is false.
         select = select or not bw.is_game_path_valid(self.game_path)
 
         # While we need to select something
@@ -508,16 +535,21 @@ class Editor(tk.Tk):
                 response = filedialog.askdirectory(
                     title="Game directory", initialdir=bw.deepest_valid_path(self.game_path)
                 )
-                if isinstance(response, str):
-                    break  # We got a response, so break the loop
 
+                # We got a response, so break the loop.
+                if response:
+                    break
+
+                # The user cancelled, but we aren't supposed to force. Abort.
                 if not do_or_die:
-                    return  # We did not get a response, but we aren't supposed to force.
+                    return
 
+                # The only remaining possibility is that the user cancelled,
+                # but we are do or die. They must choose a directory, or quit.
                 if mb.askyesno(
                     "Cannot cancel",
                     "The program needs a valid directory to continue. Exit the program?",
-                ):  # Do or die
+                ):
                     self.destroy()
                     sys.exit()
 
@@ -529,19 +561,19 @@ class Editor(tk.Tk):
                     "Could not find the word list and pop definitions here.",
                 )
             else:
-                self.game_path = response + os.sep  # We got a new valid directory
+                self.game_path = response  # We got a new valid directory
 
         # First, load the wordlist
         self.busy_text = f"Loading {bw.WORDLIST_FILE}..."
         with open(
-            op.join(self.game_path, bw.WORDLIST_FILE), encoding=bw.WORDLIST_ENC
+            self.wordlist_abs_path, encoding=bw.WORDLIST_ENC
         ) as f:
             self.words = bw.unpack_wordlist(f.read().strip())
 
         # Then, load the popdefs
         self.busy_text = f"Loading {bw.POPDEFS_FILE}..."
         with open(
-            op.join(self.game_path, bw.POPDEFS_FILE), encoding=bw.POPDEFS_ENC
+            self.popdefs_abs_path, encoding=bw.POPDEFS_ENC
         ) as f:
             self.defs = bw.unpack_popdefs(f.read().strip())
 
@@ -565,31 +597,52 @@ class Editor(tk.Tk):
         self.busy_text = "Saving..."
 
         # Backup system
+        # Recommend a backup if the files are older than this program
+        backup = backup or (
+            # Make sure we have files to back up before timestamp reading
+            bw.is_game_path_valid(self.game_path) and
+
+            # Files are older than this program
+            min((
+                op.getmtime(self.wordlist_abs_path),
+                op.getmtime(self.popdefs_abs_path),
+                )) < info.INITIAL_COMMIT_TIMESTAMP and
+
+            # User confirmed a backup based on this
+            mb.askyesno(
+                "Backup recommended",
+                "The existing game files are older than this program. Save a backup?"
+                ))
+
         if backup:
-            try:
-                shutil.copy(
-                    op.join(self.game_path, bw.WORDLIST_FILE),
-                    op.join(self.game_path, bw.WORDLIST_FILE + BACKUP_SUFFIX),
-                )
-                shutil.copy(
-                    op.join(self.game_path, bw.POPDEFS_FILE),
-                    op.join(self.game_path, bw.POPDEFS_FILE + BACKUP_SUFFIX),
-                )
-            except FileNotFoundError:
+            # Catch for the files having been deleted while editing them
+            if not bw.is_game_path_valid(self.game_path):
                 mb.showerror(
                     "Backup failed",
-                    "Could not back up the original files because they have disappeared.",
+                    "Could not back up the original files because they have disappeared. Saving to original location anyway.",
+                )
+                backup = False
+
+            else:
+                timestamp = int(time.time())
+                shutil.copy(
+                    self.wordlist_abs_path,
+                    f"{self.wordlist_abs_path}_{timestamp}{BACKUP_SUFFIX}",
+                )
+                shutil.copy(
+                    self.popdefs_abs_path,
+                    f"{self.popdefs_abs_path}_{timestamp}{BACKUP_SUFFIX}",
                 )
 
         # First, save the wordlist
         with open(
-            op.join(self.game_path, bw.WORDLIST_FILE), "w", encoding=bw.WORDLIST_ENC
+            self.wordlist_abs_path, "w", encoding=bw.WORDLIST_ENC
         ) as f:
             f.write(bw.pack_wordlist(self.words))
 
         # Then, save the popdefs
         with open(
-            op.join(self.game_path, bw.POPDEFS_FILE), "w", encoding=bw.POPDEFS_ENC
+            self.popdefs_abs_path, "w", encoding=bw.POPDEFS_ENC
         ) as f:
             f.write(bw.pack_popdefs(self.defs))
 
@@ -864,7 +917,7 @@ class Editor(tk.Tk):
         if already_have:
             mb.showinfo(
                 "Already have some words",
-                f"{already_have} words are already in the word list.",
+                f"{already_have:,} words are already in the word list.",
             )
 
         # Filter to words of valid lengths
