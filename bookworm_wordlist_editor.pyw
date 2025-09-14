@@ -43,13 +43,29 @@ TEXT_FILETYPE = [("Plain text", ".txt")]
 # Allow system environment variable to override normal default for game path
 ENV_GAME_PATH = os.environ.get("BOOKWORM_GAME_PATH")
 if ENV_GAME_PATH:
-    if op.exists(ENV_GAME_PATH):
-        print("System set game path default to", ENV_GAME_PATH)
-        GAME_PATH_DEFAULT = ENV_GAME_PATH
-    else:
+    # The environment variable points to a nonexistent path
+    if not op.exists(ENV_GAME_PATH):
         print("System tried to set game path default to", ENV_GAME_PATH, "but it does not exist.")
         GAME_PATH_DEFAULT = bw.GAME_PATH_DEFAULT
 
+    # The environment variable points to a real path that is not a valid game path
+    elif not bw.is_game_path_valid(ENV_GAME_PATH):
+        # The default game path is valid
+        if bw.is_game_path_valid(bw.GAME_PATH_DEFAULT):
+            print("System tried to set game path default to", ENV_GAME_PATH, "but it is not valid while", bw.GAME_PATH_DEFAULT, "is.")
+            GAME_PATH_DEFAULT = bw.GAME_PATH_DEFAULT
+
+        # The default game path isn't any better than the one provided
+        else:
+            print("System set game path default to", ENV_GAME_PATH, "which is not a valid game path, but it's the best we know.")
+            GAME_PATH_DEFAULT = ENV_GAME_PATH
+
+    # The environment variable was set validly
+    else:
+        print("System set game path default to", ENV_GAME_PATH)
+        GAME_PATH_DEFAULT = ENV_GAME_PATH
+
+# The environment variable was not set
 else:
     GAME_PATH_DEFAULT = bw.GAME_PATH_DEFAULT
 
@@ -146,6 +162,7 @@ class Editor(tk.Tk):
     def build(self):
         """Construct GUI"""
 
+        # Set up keyboard shortcuts
         self.bind("<Control-o>", lambda _: self.load_files(select=True))
         self.bind("<Control-r>", lambda _: self.load_files(select=False))
         self.bind("<Control-s>", self.save_files)
@@ -489,7 +506,7 @@ class Editor(tk.Tk):
         while select:
             while True:  # Keep asking for an input
                 response = filedialog.askdirectory(
-                    title="Game directory", initialdir=self.game_path
+                    title="Game directory", initialdir=bw.deepest_valid_path(self.game_path)
                 )
                 if isinstance(response, str):
                     break  # We got a response, so break the loop

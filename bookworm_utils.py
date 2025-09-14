@@ -35,6 +35,7 @@ S.D.G.
 import bisect
 import getpass
 import os.path as op
+from pathlib import Path
 import platform
 import warnings
 import nltk
@@ -301,3 +302,19 @@ def binary_search(elements, value):
 
     # Lookup failed
     return None
+
+
+def deepest_valid_path(path: str | Path) -> Path:
+    """Find the deepest part of the given path that is valid
+
+    Args:
+        path (str | Path): The path to test.
+
+    Returns:
+        valid (Path): The closest we could really get to the specified path."""
+
+    path = Path(path).absolute()
+    while not path.exists():
+        path = path.parent
+
+    return path
