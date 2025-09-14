@@ -20,6 +20,7 @@ limitations under the License.
 S.D.G."""
 
 from os import path as op
+import time
 import webbrowser
 import tkinter as tk
 
@@ -30,6 +31,9 @@ PROGRAM_VER = "1.11.0"
 ICON_PATH = op.join(OP_PATH, "bookworm_wordlist_editor.png")
 LICENSE_NAME = "Apache License version 2.0"
 
+INITIAL_COMMIT_DATE_STR = "Wed Mar 27 13:07:57 2024 -0400"
+COMMIT_DATE_PARSEFORM = "%a %b %d %H:%M:%S %Y %z"
+INITIAL_COMMIT_TIMESTAMP = time.mktime(time.strptime(INITIAL_COMMIT_DATE_STR, COMMIT_DATE_PARSEFORM))
 
 class URL:
     """URLs to various places"""
