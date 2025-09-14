@@ -37,6 +37,7 @@ import getpass
 import os.path as op
 from pathlib import Path
 import platform
+import re
 import warnings
 import nltk
 from nltk.corpus import wordnet
@@ -45,6 +46,9 @@ from wordfreq import zipf_frequency
 # Language and charset information
 ALPHABET = "abcdefghijklmnopqrstuvwxyz"
 NUMERIC = "1234567890"
+
+# RegEx pattern to match one or more of any whitespace character
+WHITESPACE_PATTERN = re.compile(r"\s+")
 
 # Make sure we have the NLTK wordnet for our English dictionary
 # Note: Without internet, nltk.download will quietly fail and return False.
@@ -96,7 +100,6 @@ POPDEFS_FILE = "popdefs.txt"
 # Encoding to use when opening the wordlist and popdefs files
 WORDLIST_ENC = "utf-8"
 POPDEFS_ENC = "iso 8859-15"
-
 
 def unpack_wordlist(wordlist: str) -> list:
     """Unpack the game's wordlist syntax

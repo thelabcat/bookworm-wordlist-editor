@@ -704,7 +704,7 @@ class Editor(tk.Tk):
     def update_definition(self):
         """Update the stored definition for a word"""
 
-        def_entry = self.def_field.get("0.0", tk.END).strip()
+        def_entry = bw.WHITESPACE_PATTERN.sub(" ", self.def_field.get("0.0", tk.END).strip())
 
         # We have a definition to save
         if def_entry:
@@ -717,7 +717,7 @@ class Editor(tk.Tk):
         # There are now unsaved changes
         self.unsaved_changes = True
 
-        # In case any whitespace was stripped off of the start or end, reload the definition
+        # In case any whitespace was stripped off or newlines replaced, reload the definition
         self.load_definition()
 
         # Disable definition reset and save buttons now that the definition was saved
