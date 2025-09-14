@@ -30,7 +30,8 @@ Once the program loads the files, you should see a list of words in the left pan
 - The File menu provides the following operations:
     - Open (Ctrl + O): Open a different word list and popdefs file pair.
     - Reload (Ctrl + R): Reload the current word list and popdefs file pair, reversing all your changes.
-    - Save (Ctrl + S): Save your changes.
+    - Save (Ctrl + S): Save your changes. Automatically asks if you would like to do a backup if the original files are older than my program.
+    - Backup existing (Ctrl + B): Copy the existing files to a backup named version in the same directory.
 - The Edit menu provides the following operations:
     - Delete orphaned definitions: Removes definitions from the popdefs that do not have a word in the wordlist.
     - Delete words of invalid length: Removes words that BookWorm Deluxe will not allow as moves because of their length.

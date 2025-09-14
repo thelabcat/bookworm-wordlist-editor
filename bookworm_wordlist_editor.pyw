@@ -36,7 +36,7 @@ import info
 # File paths and related info
 OP_PATH = op.dirname(__file__)  # The path of the script file's containing folder
 
-BACKUP_SUFFIX = ".bak"  # Suffix for backup files
+BACKUP_FILEEXT = ".bak"  # Suffix for backup files
 
 # Tkinter file dialog types filter for plain text files
 TEXT_FILETYPE = [("Plain text", ".txt")]
@@ -168,6 +168,7 @@ class Editor(tk.Tk):
         self.bind("<Control-o>", lambda _: self.load_files(select=True))
         self.bind("<Control-r>", lambda _: self.load_files(select=False))
         self.bind("<Control-s>", self.save_files)
+        self.bind("<Control-b>", self.make_backup)
 
         # Menubar
         self.menubar = tk.Menu(self)
@@ -182,6 +183,7 @@ class Editor(tk.Tk):
             label="Reload", underline=0, command=lambda: self.load_files(select=False)
         )
         self.file_menu.add_command(label="Save", underline=0, command=self.save_files)
+        self.file_menu.add_command(label="Backup existing", underline=0, command=self.make_backup)
         self.menubar.add_cascade(label="File", menu=self.file_menu)
 
         # Edit menu
@@ -615,24 +617,7 @@ class Editor(tk.Tk):
                 ))
 
         if backup:
-            # Catch for the files having been deleted while editing them
-            if not bw.is_game_path_valid(self.game_path):
-                mb.showerror(
-                    "Backup failed",
-                    "Could not back up the original files because they have disappeared. Saving to original location anyway.",
-                )
-                backup = False
-
-            else:
-                timestamp = int(time.time())
-                shutil.copy(
-                    self.wordlist_abs_path,
-                    f"{self.wordlist_abs_path}_{timestamp}{BACKUP_SUFFIX}",
-                )
-                shutil.copy(
-                    self.popdefs_abs_path,
-                    f"{self.popdefs_abs_path}_{timestamp}{BACKUP_SUFFIX}",
-                )
+            self.make_backup()
 
         # First, save the wordlist
         with open(
@@ -647,6 +632,34 @@ class Editor(tk.Tk):
             f.write(bw.pack_popdefs(self.defs))
 
         self.unsaved_changes = False  # All changes are now saved
+
+    def make_backup(self):
+        """Save a backup of the files, with a timestamp.
+
+        Returns:
+            success (bool): Wether or not we were able to backup."""
+
+        # Catch for the files having been deleted while editing them
+        if not bw.is_game_path_valid(self.game_path):
+            mb.showerror(
+                "Backup failed",
+                "Could not back up the original files because they have disappeared.",
+            )
+            return False
+
+        backup_suffix = f"_{int(time.time())}{BACKUP_FILEEXT}"
+        shutil.copy(
+            self.wordlist_abs_path,
+            self.wordlist_abs_path + backup_suffix,
+        )
+        shutil.copy(
+            self.popdefs_abs_path,
+            self.popdefs_abs_path + backup_suffix,
+        )
+
+        # Notify the user that the backup was successful
+        mb.showinfo("Backup completed", f"Copied files to current game path with suffix '{backup_suffix}'")
+        return True
 
     def selection_updated(self, event=None):
         """A new word has been selected, update everything.
