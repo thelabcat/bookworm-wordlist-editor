@@ -380,12 +380,14 @@ class Editor(tk.Tk):
     def update_query(self):
         """Update the list of search results"""
 
-        # Do not allow any capitalization or non-letters in the search field
-        self.search_str.set(
-            "".join([char for char in self.search_str.get().lower() if char.isalpha()])
-        )
+        # Do not allow any capitalization or non-letters in the search
+        search = "".join([
+                char for char in self.search_str.get().lower()
+                if char.isalpha()
+                ])
 
-        search = self.search_str.get()
+        # Apply that filtering to whatever is typed
+        self.search_str.set(search)
 
         # Comprehensively filter the wordlist to only matching words
         if search:
@@ -425,8 +427,8 @@ class Editor(tk.Tk):
     @selected_word.setter
     def selected_word(self, word: str):
         """The currently selected word.
-            If set to something not in the query, clears the query.
-            If set to a word we don't have, quietly reverts to NO_WORD.
+            If set to a word that is not in the current query,
+            quietly reverts to NO_WORD.
 
         Args:
             word (str): The word to try and select."""
@@ -434,10 +436,6 @@ class Editor(tk.Tk):
         # For our logic purposes, NO_WORD should be treated as null.
         if word == NO_WORD:
             word = ""
-
-        # Current search does not contain word
-        if self.search_str.get() not in word:
-            self.search_str.set("")  # WARNING: Causes one layer of recursion.
 
         # The word is in our current query, so select and view it
         if word and bw.binary_search(self.words, word) is not None:
@@ -560,6 +558,10 @@ class Editor(tk.Tk):
             )
 
         # Highlight and scroll to the new word even if it wasn't actually new
+        # If the word isn't in our search query, clear it so we can still
+        # select the word.
+        if self.search_str.get() not in new:
+            self.search_str.set("")
         self.selected_word = new
 
     def mass_unsaved_changes(self, title: str, changes: str):
