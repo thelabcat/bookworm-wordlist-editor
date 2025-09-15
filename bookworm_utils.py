@@ -101,6 +101,7 @@ POPDEFS_FILE = "popdefs.txt"
 WORDLIST_ENC = "utf-8"
 POPDEFS_ENC = "iso 8859-15"
 
+
 def unpack_wordlist(wordlist: str) -> list:
     """Unpack the game's wordlist syntax
 
@@ -141,7 +142,7 @@ def unpack_wordlist(wordlist: str) -> list:
                 "Copy count is {copy} at the first word but there are no words yet."
             )
 
-    return words
+    return sorted(words)
 
 
 def pack_wordlist(words: list[str]) -> str:
@@ -159,7 +160,7 @@ def pack_wordlist(words: list[str]) -> str:
     # The previous number of letters copied from the word(s) before the current word
     oldcopy = 0
 
-    for i, new_word in enumerate(words):
+    for i, new_word in enumerate(sorted(words)):
         # The first word cannot possibly copy anything, and should be listed whole
         if i == 0:
             listings.append(new_word)
@@ -190,14 +191,14 @@ def unpack_popdefs(popdefs: str) -> dict[str, str]:
         popdefs (str): The contents of popdefs.txt
 
     Returns:
-        definitions (dict[str, str]): The parsed popup definitions"""
+        definitions (dict[str, str]): The parsed popup definitions, sorted."""
 
     # Split all non-blank lines at a tab, into the lowercase word and its definition
-    return {
+    return dict(sorted({
         line.split("\t")[0].lower(): line.split("\t")[1]
         for line in popdefs.strip().splitlines()
         if line
-    }
+    }.items()))
 
 
 def pack_popdefs(defs: dict[str, str]) -> str:
@@ -210,7 +211,10 @@ def pack_popdefs(defs: dict[str, str]) -> str:
         popdefs (str): The contents of a new popdefs.txt"""
 
     return "\n".join(
-        [word.upper() + "\t" + definition for word, definition in sorted(defs.items())]
+        [
+            word.upper() + "\t" + definition
+            for word, definition in sorted(defs.items())
+        ]
     )
 
 
