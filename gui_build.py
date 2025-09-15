@@ -20,6 +20,7 @@ limitations under the License.
 S.D.G."""
 
 import tkinter as tk
+from tkinter import ttk
 import webbrowser
 import info
 
@@ -156,8 +157,11 @@ def __build_list_pane(self: tk.Tk, list_frame: tk.Frame):
     self.search_entry.grid(row=0, column=1, sticky=tk.NSEW)
     self.search_frame.columnconfigure(1, weight=1)
 
-    self.search_clear_bttn = tk.Button(
-        self.search_frame, text="🧹", command=lambda: self.search_str.set("")
+    self.search_clear_bttn = ttk.Button(
+        self.search_frame,
+        text="🧹",
+        width=3,
+        command=lambda: self.search_str.set("")
     )
     self.search_clear_bttn.grid(row=0, column=2, sticky=tk.NSEW)
     self.widgets_to_disable += [
