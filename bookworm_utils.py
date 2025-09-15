@@ -99,9 +99,9 @@ GAME_PATH_NIX_USERS = Path(SYS_USER, ".wine", "drive_c").joinpath(GAME_PATH_C)
 
 # Default game path based on the OS
 GAME_PATH_OS_DEFAULT = {
-    "Linux": Path("/home").joinpath(GAME_PATH_NIX_USERS),
-    "Darwin": Path("/Users").joinpath(GAME_PATH_NIX_USERS),
-    "Windows": Path("C:").joinpath(GAME_PATH_C),
+    "Linux": op.join("/home", GAME_PATH_NIX_USERS),
+    "Darwin": op.join("/Users", GAME_PATH_NIX_USERS),
+    "Windows": op.join("C:\\", GAME_PATH_C),
 }[platform.system()]
 
 # Tkinter file dialog types filter for plain text files
