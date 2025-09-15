@@ -40,7 +40,7 @@ def __build_menubar(self: tk.Tk):
 
     # File menu
     self.file_menu = tk.Menu(self.menubar, tearoff=1)
-    self.menu_labels["file"] = "🗃️ File"
+    self.menu_labels["file"] = "🗃 File"
 
     # Open
     self.bind("<Control-o>", lambda _: self.load_files(select=True))
@@ -83,7 +83,7 @@ def __build_menubar(self: tk.Tk):
 
     # Edit menu
     self.edit_menu = tk.Menu(self.menubar, tearoff=1)
-    self.menu_labels["edit"] = "🖊️ Edit"
+    self.menu_labels["edit"] = "🖊 Edit"
 
     self.edit_menu.add_command(
         label="➕ Add several words", command=self.mass_add_words
@@ -95,7 +95,7 @@ def __build_menubar(self: tk.Tk):
 
     self.edit_menu.add_separator()
     self.edit_menu.add_command(
-        label="🗑️ Delete several words", command=self.mass_delete_words
+        label="🗑 Delete several words", command=self.mass_delete_words
     )
     self.edit_menu.add_command(
         label="📏 Delete words of invalid length",
@@ -118,7 +118,7 @@ def __build_menubar(self: tk.Tk):
     self.menu_labels["help"] = "❔ Help"
 
     self.help_menu.add_command(
-        label="🪧 About", command=lambda: info.AboutDialogue(self)
+        label="ⓘ About", command=lambda: info.AboutDialogue(self)
     )
 
     self.help_menu.add_separator()
@@ -266,7 +266,7 @@ def __build_word_edit_pane(self: tk.Tk, word_edit_frame: tk.Frame):
 
     self.del_bttn = tk.Button(
         word_edit_frame,
-        text="🗑️ Delete word",
+        text="🗑 Delete word",
         command=self.delete_selected_word,
     )
     self.del_bttn.grid(row=4, columnspan=2, sticky=tk.NSEW)
