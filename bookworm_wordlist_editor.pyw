@@ -147,7 +147,8 @@ class Editor(tk.Tk):
         if self.unsaved_changes:
             answer = mb.askyesnocancel(
                 "Unsaved changes",
-                "There are currently unsaved changes to the word list and / or popdefs. Save before exiting?",
+                "There are currently unsaved changes to the word list " +
+                "and / or popdefs. Save before exiting?",
             )
 
             # The user cancelled the exit
@@ -183,30 +184,43 @@ class Editor(tk.Tk):
             label="Reload", underline=0, command=lambda: self.load_files(select=False)
         )
         self.file_menu.add_command(label="Save", underline=0, command=self.save_files)
+
+        self.file_menu.add_separator()
         self.file_menu.add_command(label="Backup existing", underline=0, command=self.make_backup)
         self.menubar.add_cascade(label="File", menu=self.file_menu)
 
         # Edit menu
         self.edit_menu = tk.Menu(self.menubar, tearoff=1)
         self.edit_menu.add_command(
-            label="Delete orphaned definitions", command=self.del_orphaned_defs
+            label="Add several words", command=self.mass_add_words
+        )
+        self.edit_menu.add_command(
+            label="Auto-define undefined rare words", command=self.mass_auto_define
+        )
+
+        self.edit_menu.add_separator()
+        self.edit_menu.add_command(
+            label="Delete several words", command=self.mass_delete_words
         )
         self.edit_menu.add_command(
             label="Delete words of invalid length", command=self.del_invalid_len_words
         )
         self.edit_menu.add_command(
-            label="Add several words", command=self.mass_add_words
+            label="Delete orphaned definitions", command=self.del_orphaned_defs
         )
         self.edit_menu.add_command(
-            label="Delete several words", command=self.mass_delete_words
-        )
-        self.edit_menu.add_command(
-            label="Auto-define undefined rare words", command=self.mass_auto_define
+            label="Delete duplicate word listings", command=self.del_dupe_words
         )
         self.menubar.add_cascade(label="Edit", menu=self.edit_menu)
 
         # Help menu
         self.help_menu = tk.Menu(self.menubar, tearoff=1)
+
+        self.help_menu.add_command(
+            label="About", command=lambda: info.AboutDialogue(self)
+        )
+
+        self.help_menu.add_separator()
         self.help_menu.add_command(
             label="How to use",
             foreground="blue",
@@ -216,9 +230,6 @@ class Editor(tk.Tk):
             label="Report an issue",
             foreground="blue",
             command=lambda: webbrowser.open(info.URL.report_issue),
-        )
-        self.help_menu.add_command(
-            label="About", command=lambda: info.AboutDialogue(self)
         )
         self.menubar.add_cascade(label="Help", menu=self.help_menu)
 
@@ -340,7 +351,7 @@ class Editor(tk.Tk):
         self.widgets_to_disable.append(self.autodef_bttn)
 
         self.del_bttn = tk.Button(
-            self.worddef_frame, text="Delete word", command=self.del_word
+            self.worddef_frame, text="Delete word", command=self.delete_selected_word
         )
         self.del_bttn.grid(row=4, columnspan=2, sticky=tk.NSEW)
         self.widgets_to_disable.append(self.del_bttn)
@@ -570,14 +581,18 @@ class Editor(tk.Tk):
         with open(
             self.wordlist_abs_path, encoding=bw.WORDLIST_ENC
         ) as f:
-            self.words = bw.unpack_wordlist(f.read().strip())
+            self.words = sorted(bw.unpack_wordlist(f.read().strip()))
 
         # Then, load the popdefs
         self.busy_text = f"Loading {bw.POPDEFS_FILE}..."
         with open(
             self.popdefs_abs_path, encoding=bw.POPDEFS_ENC
         ) as f:
-            self.defs = bw.unpack_popdefs(f.read().strip())
+            self.defs = dict(
+                sorted(
+                    bw.unpack_popdefs(f.read().strip()).items()
+                    )
+                )
 
         # Update the query list
         self.busy_text = "Updating display..."
@@ -586,8 +601,8 @@ class Editor(tk.Tk):
         # The files were just (re)loaded, so there are no unsaved changes
         self.unsaved_changes = False
 
-    def save_files(self, event=None, backup=False):
-        """Save the worldist and popdefs
+    def save_files(self, event=None, backup: bool = False):
+        """Save the worldist and popdefs (threaded).
 
         Args:
             event (object): Unused, receives Tkinter callback event data.
@@ -595,11 +610,18 @@ class Editor(tk.Tk):
             backup (bool): Wether or not to copy the original files to a backup name.
                 Defaults to False."""
 
-        # If we are in a thread, show progress
-        self.busy_text = "Saving..."
+        self.thread_process(lambda: self.__save_files(backup))
+
+    def __save_files(self, backup: bool = False):
+        """Save the worldist and popdefs.
+
+        Args:
+            backup (bool): Wether or not to copy the original files to a backup name.
+                Defaults to False."""
 
         # Backup system
         # Recommend a backup if the files are older than this program
+        self.busy_text = "Checking need for backup..."
         backup = backup or (
             # Make sure we have files to back up before timestamp reading
             bw.is_game_path_valid(self.game_path) and
@@ -617,19 +639,22 @@ class Editor(tk.Tk):
                 ))
 
         if backup:
+            self.busy_text = "Creating backup..."
             self.make_backup()
 
         # First, save the wordlist
+        self.busy_text = f"Saving {bw.WORDLIST_FILE}..."
         with open(
             self.wordlist_abs_path, "w", encoding=bw.WORDLIST_ENC
         ) as f:
-            f.write(bw.pack_wordlist(self.words))
+            f.write(bw.pack_wordlist(sorted(self.words)))
 
         # Then, save the popdefs
+        self.busy_text = f"Saving {bw.POPDEFS_FILE}..."
         with open(
             self.popdefs_abs_path, "w", encoding=bw.POPDEFS_ENC
         ) as f:
-            f.write(bw.pack_popdefs(self.defs))
+            f.write(bw.pack_popdefs(dict(sorted(self.defs.items()))))
 
         self.unsaved_changes = False  # All changes are now saved
 
@@ -662,14 +687,18 @@ class Editor(tk.Tk):
         return True
 
     def selection_updated(self, event=None):
-        """A new word has been selected, update everything.
+        """A new word has been selected (or the equivalent of such), update
+            everything.
 
         Args:
             event (object): Unused, receives Tkinter callback event data.
                 Defaults to None."""
 
-        self.word_display.config(text=self.selected_word)  # Display the current word
-        self.load_definition()  # Load and display the current definition
+        # Display the current word
+        self.word_display.config(text=self.selected_word)
+
+        # Load and display the current definition
+        self.load_definition()
 
         # If no word is selected, clear the usage statistic display
         if self.selected_word == NO_WORD:
@@ -680,6 +709,8 @@ class Editor(tk.Tk):
             usage = bw.get_word_usage(self.selected_word)
             self.usage_display.config(
                 text=WORDFREQ_DISP_PREFIX + str(usage),
+
+                # Make the usage display colored based on a rarity threshold
                 fg=RARE_COLS[int(usage < bw.RARE_THRESH)],
             )
 
@@ -699,6 +730,7 @@ class Editor(tk.Tk):
         # Comprehensively filter the wordlist to only matching words
         if search:
             query = [word for word in self.words if search in word]
+
             # Sort search results primarily by how close the search query is to the beginning
             query.sort(key=lambda x: x.index(search))
 
@@ -719,7 +751,7 @@ class Editor(tk.Tk):
 
     @property
     def selected_word(self):
-        """The currently selected word
+        """The currently selected word.
 
         Returns:
             word (str): Either the curently selected word or NO_WORD."""
@@ -732,23 +764,30 @@ class Editor(tk.Tk):
 
     @selected_word.setter
     def selected_word(self, word: str):
-        """Change what word is selected. If the given word is not in the
-        current query, quietly clear the current selection.
+        """The currently selected word.
+            If set to something not in the query, clears the query.
+            If set to a word we don't have, quietly reverts to NO_WORD.
 
         Args:
             word (str): The word to try and select."""
 
+        # For our logic purposes, NO_WORD should be treated as null.
         if word == NO_WORD:
             word = ""
 
+        # Current search does not contain word
+        if self.search.get() not in word:
+            self.search.set("")  # WARNING: Causes one layer of recursion.
+
         # The word is in our current query, so select and view it
-        if word and word in self.query_list.get():
+        if word and bw.binary_search(self.words, word) is not None:
             word_query_index = self.query_list.get().index(word)
             self.query_box.selection_clear(0, tk.END)
             self.query_box.selection_set(word_query_index)
             self.query_box.see(word_query_index)
 
-        # Something not in the query list was given, clear the selection
+        # Something not in the query list was given, or NO_WORD was given.
+        # Clear the selection.
         else:
             self.query_box.selection_clear(0, tk.END)
 
@@ -764,13 +803,18 @@ class Editor(tk.Tk):
         if self.selected_word != NO_WORD and self.selected_word in self.defs:
             self.def_field.insert(0.0, self.defs[self.selected_word])
 
-        # Disable definition reset and save buttons now that a definition was (re)loaded
+        # The definition has no unsaved changes.
+        # Disable definition reset and save buttons.
         self.regulate_def_buttons()
 
     def update_definition(self):
         """Update the stored definition for a word"""
 
-        def_entry = bw.WHITESPACE_PATTERN.sub(" ", self.def_field.get("0.0", tk.END).strip())
+        # Filter definition to only spaces, and remove surrounding whitespace.
+        def_entry = bw.WHITESPACE_PATTERN.sub(
+            " ",
+            self.def_field.get("0.0", tk.END).strip(),
+            )
 
         # We have a definition to save
         if def_entry:
@@ -783,10 +827,11 @@ class Editor(tk.Tk):
         # There are now unsaved changes
         self.unsaved_changes = True
 
-        # In case any whitespace was stripped off or newlines replaced, reload the definition
+        # In case the invalid character filtering changed what was entered
         self.load_definition()
 
-        # Disable definition reset and save buttons now that the definition was saved
+        # The definition has no unsaved changes.
+        # Disable definition reset and save buttons.
         self.regulate_def_buttons()
 
     def is_len_valid(self, word: str, notify: bool = False) -> bool:
@@ -800,10 +845,15 @@ class Editor(tk.Tk):
         Returns:
             result (bool): Is the word of valud length?"""
 
-        if not (valid := bw.WORD_LENGTH_MIN <= len(word) <= bw.WORD_LENGTH_MAX) and notify:
-            # Dialog auto-selects the word "short" or "long" based on wether the invalid length was a too long case or not
+        valid = bw.WORD_LENGTH_MIN <= len(word) <= bw.WORD_LENGTH_MAX
+
+        if not valid and notify:
+            # Dialog auto-selects the word "short" or "long" based on wether
+            # the invalid length was a too long case or not.
             mb.showerror(
-                "Word is too " + ("short", "long")[int(len(word) > bw.WORD_LENGTH_MAX)],
+                "Word is too " +
+                ("short", "long")[int(len(word) > bw.WORD_LENGTH_MAX)],
+
                 f"Word must be between {bw.WORD_LENGTH_MIN:,} and {bw.WORD_LENGTH_MAX:,} letters long.",
             )
 
@@ -812,24 +862,24 @@ class Editor(tk.Tk):
     def add_word(self):
         """Create a new word entry"""
 
-        new = dialog.askstring("New word", "Enter the new word to add:")
+        new = dialog.askstring("New word", "Enter the word to add:")
 
-        # Allow the user to cancel, and also ensure the word is of allowed length
+        # Allow the user to cancel, and also enforce length delimiters.
         if not new or not self.is_len_valid(new, notify=True):
             return
+
         new = new.lower()
 
         # Ensure that the word is only letters
-        for char in new:
-            if char not in bw.ALPHABET:
-                mb.showerror(
-                    "Invalid character found",
-                    "Word must be only letters (no numbers or symbols).",
-                )
-                return
+        if not new.isalpha():
+            mb.showerror(
+                "Invalid characters found",
+                "Word must be only letters (no numbers or symbols).",
+            )
+            return
 
-        # If the word really is new, add it
-        if new not in self.words:
+        # If the word really is new, add it.
+        if not bw.binary_search(self.words, new):
             # Add the new word
             self.words.append(new)
             self.words.sort()
@@ -840,64 +890,25 @@ class Editor(tk.Tk):
             # There are now unsaved changes
             self.unsaved_changes = True
 
+        # If it is not new, notify the user.
         else:
             mb.showinfo(
-                "Already have word", f"The word '{new}' is already in the word list."
+                "Already have word",
+                f"The word '{new}' is already in the word list.",
             )
 
-        # Highlight and scroll to the new word even if it wasn't actually new,
-        # so long as it is in our current search results.
+        # Highlight and scroll to the new word even if it wasn't actually new
         self.selected_word = new
 
-    def __read_alpha_words(self, f):
-        """Read alphabetical words from a human-readable list file and then
-            close it, doing GUI status stuff in the process.
-
-        Args:
-            f: The open file-like object to be read.
+    def __load_alpha_file(self):
+        """Select a text file containing a human-readable list of words,
+            read it, close it, and filter the result to alpha-only words.
 
         Returns:
-            words (list): The list of alpha-only words from the file."""
+            words (list): The list of alpha-only words from the file.
+                Returns empty list if cancelled."""
 
-        # Read and close the file, splitting into words by whitespace
-        listed_words = f.read().strip().lower().split()
-        f.close()
-
-        # There were no words
-        if not listed_words:
-            mb.showerror("Invalid file", "Did not find any words in file.")
-            return []
-
-        # filter file to only alpha words
-        self.busy_text = "Filtering to alpha-only words..."
-        alpha_words = [
-            word for word in listed_words if word.isalpha() or word.isspace()
-        ]
-        were_nonalpha = len(listed_words) - len(alpha_words)
-
-        # There was no text besides non-alpha symbols
-        if not alpha_words:
-            mb.showerror("Invalid file", "File did not contain any alpha-only words.")
-            return []
-
-        # There were some non-alpha words
-        if were_nonalpha:
-            mb.showwarning(
-                "Some invalid words",
-                f"{were_nonalpha:,} words were rejected because they contained non-alpha characters.",
-            )
-
-        return alpha_words
-
-    def mass_add_words(self):
-        """Add a whole file's list of words (threaded)"""
-
-        self.thread_process(self.__mass_add_words)
-
-    def __mass_add_words(self):
-        """Add a whole file's worth of words"""
-
-        # Open and read a file with a human-readable list of new words
+        # Have the user select the file
         f = filedialog.askopenfile(
             title="Select human-readable list of words",
             filetypes=TEXT_FILETYPE,
@@ -905,16 +916,89 @@ class Editor(tk.Tk):
 
         # The user cancelled via the open file dialog
         if not f:
-            return
+            return []
 
-        alpha_words = self.__read_alpha_words(f)
+        # Read and close the file, splitting into words by whitespace
+        listed_words = f.read().strip().lower().split()
+        f.close()
+
+        # There were no words
+        if not listed_words:
+            mb.showerror(
+                "Invalid file",
+                "Did not find any words in file.",
+                )
+            return []
+
+        # Filter out duplicates
+        self.busy_text = "Filtering out duplicates in file..."
+        nodupe_words = set(listed_words)
+        dupe_count = len(listed_words) - len(nodupe_words)
+        if dupe_count:
+            mb.showwarning(
+                "Some duplicates in file",
+                f"The file had {dupe_count:,} duplicate listings in itself.",
+                )
+
+        # filter file to only alpha words
+        self.busy_text = "Filtering to alpha-only words..."
+        alpha_words = [
+            word for word in nodupe_words if word.isalpha()
+        ]
+        nonalpha_count = len(nodupe_words) - len(alpha_words)
+
+        # There was no text besides non-alpha symbols
+        if not alpha_words:
+            mb.showerror(
+                "Invalid file",
+                "File did not contain any alpha-only words.",
+                )
+            return []
+
+        # There were some non-alpha words
+        if nonalpha_count:
+            mb.showwarning(
+                "Some invalid words",
+                f"{nonalpha_count:,} words were rejected because they " +
+                "contained non-alpha characters.",
+            )
+
+        return alpha_words
+
+    def __mass_unsaved_changes(self, title: str, changes: str):
+        """Call when mass changes have been made to the files.
+            Offers to save them to disk.
+
+        Args:
+            title (str): The title of the dialog.
+            changes (str): A human-readable description of the changes made."""
+
+        self.unsaved_changes = True
+
+        # Offer to save changes
+        if mb.askyesno(
+            title,
+            changes + "\nSave changes to disk now?",
+        ):
+            self.save_files()
+
+    def mass_add_words(self):
+        """Add a whole file's worth of words (threaded)"""
+
+        self.thread_process(self.__mass_add_words)
+
+    def __mass_add_words(self):
+        """Add a whole file's worth of words"""
+
+        alpha_words = self.__load_alpha_file()
         if not alpha_words:
             return
 
         # Filter to words we do not already have
         self.busy_text = "Filtering to only new words..."
         new_words = [
-            word for word in alpha_words if bw.binary_search(self.words, word) is None
+            word for word in alpha_words
+            if bw.binary_search(self.words, word) is None
         ]
         already_have = len(alpha_words) - len(new_words)
 
@@ -922,7 +1006,8 @@ class Editor(tk.Tk):
         if not new_words:
             mb.showinfo(
                 "Already have all words",
-                f"All {len(alpha_words):,} alpha-only words are already in the word list.",
+                f"All {len(alpha_words):,} alpha-only words are already " +
+                "in the word list.",
             )
             return
 
@@ -935,14 +1020,18 @@ class Editor(tk.Tk):
 
         # Filter to words of valid lengths
         self.busy_text = "Filtering out invalid length words..."
-        new_lenvalid_words = [word for word in new_words if self.is_len_valid(word)]
+        new_lenvalid_words = [
+            word for word in new_words if self.is_len_valid(word)
+            ]
         len_invalid = len(new_words) - len(new_lenvalid_words)
 
         # There were no words of valid length
         if not new_lenvalid_words:
             mb.showerror(
                 "Invalid word lengths",
-                f"All {len(new_words):,} new words were rejected because they were not between {bw.WORD_LENGTH_MIN:,} and {bw.WORD_LENGTH_MAX:,} letters long.",
+                f"All {len(new_words):,} new words were rejected because " +
+                f"they were not between {bw.WORD_LENGTH_MIN:,} and " +
+                f"{bw.WORD_LENGTH_MAX:,} letters long.",
             )
             return
 
@@ -950,7 +1039,9 @@ class Editor(tk.Tk):
         if len_invalid:
             mb.showinfo(
                 "Some invalid word lengths",
-                f"{len_invalid:,} words were rejected because they were not between {bw.WORD_LENGTH_MIN:,} and {bw.WORD_LENGTH_MAX:,} letters long.",
+                f"{len_invalid:,} words were rejected because they were not " +
+                f"between {bw.WORD_LENGTH_MIN:,} and {bw.WORD_LENGTH_MAX:,} " +
+                "letters long.",
             )
 
         # Add the new words
@@ -961,14 +1052,11 @@ class Editor(tk.Tk):
         # Update the query display
         self.update_query()
 
-        # There are now unsaved changes
-        self.unsaved_changes = True
-
-        if mb.askyesno(
+        # There are now major unsaved changes
+        self.__mass_unsaved_changes(
             "Words added",
-            f"Added {len(new_lenvalid_words):,} new words to the word list. Save changes to disk now?",
-        ):
-            self.save_files()
+            f"Added {len(new_lenvalid_words):,} new words to the word list."
+        )
 
     def mass_delete_words(self):
         """Delete a whole file's worth of words (threaded)"""
@@ -978,22 +1066,20 @@ class Editor(tk.Tk):
     def __mass_delete_words(self):
         """Delete a whole file's worth of words"""
 
-        f = filedialog.askopenfile(
-            title="Select human-readable list of words",
-            filetypes=TEXT_FILETYPE,
-        )
-        if not f:  # The user cancelled
-            return
-
-        del_words = self.__read_alpha_words(f)
+        # Get the list of words to delete
+        del_words = self.__load_alpha_file()
         if not del_words:
             return
 
+        # Filter down to words we actually have
         self.busy_text = "Finding words we do have..."
         old_words = [
-            word for word in del_words if bw.binary_search(self.words, word) is not None
-        ]  # Filter words to ones we do have
+            word for word in del_words
+            if bw.binary_search(self.words, word) is not None
+        ]
         dont_have = len(del_words) - len(old_words)
+
+        # We don't have any of the words in the list
         if not old_words:
             mb.showinfo(
                 "Don't have any of the words",
@@ -1001,29 +1087,28 @@ class Editor(tk.Tk):
             )
             return
 
+        # We only have some of the words in the list
         if dont_have:
             mb.showinfo(
                 "Don't have some words",
-                f"{dont_have} of the words are not in the wordlist.",
+                f"{dont_have:,} of the words are not in the wordlist.",
             )
 
+        # Perform the deletion
         self.busy_text = "Deleting..."
         for word in old_words:
             self.__delete_word(word)
 
-        # Update the query display
+        # Words that were in the query may have been deleted, so update it.
         self.update_query()
 
-        # There are now unsaved changes
-        self.unsaved_changes = True
-
-        if mb.askyesno(
+        # There are now major unsaved changes
+        self.__mass_unsaved_changes(
             "Words deleted",
-            f"Removed {len(old_words):,} words from the word list. Save changes to disk now?",
-        ):
-            self.save_files()
+            f"Removed {len(old_words):,} words from the word list.",
+        )
 
-    def del_word(self, event=None):
+    def delete_selected_word(self, event=None):
         """Delete the currently selected word
 
         Args:
@@ -1043,13 +1128,24 @@ class Editor(tk.Tk):
         # There are now unsaved changes
         self.unsaved_changes = True
 
-    def __delete_word(self, word: str):
+    def __delete_word(self, word: str, quiet=True):
         """Delete a word from our wordlist and popdefs
 
         Args:
-            word (str): The word to delete (must actually be in the wordlist)"""
+            word (str): The word to delete.
+            quiet (bool): If the word doesn't exist, this silences an error.
+                Defaults to True, silence the error."""
 
-        self.words.remove(word)
+        # Delete the word
+        if bw.binary_search(self.words, word) is not None:
+            self.words.remove(word)
+        elif not quiet:
+            mb.showerror(
+                "Bad delete attempt",
+                f"Attempted to delete '{word}' but it was not in the wordlist."
+                )
+
+        # Delete any popdef
         if self.defs.get(word) is not None:
             del self.defs[word]
 
@@ -1061,28 +1157,31 @@ class Editor(tk.Tk):
     def __del_invalid_len_words(self):
         """Remove all words of invalid length from the wordlist"""
 
+        # Comprehensively filter to words of invalid length
         invalid = [word for word in self.words if not self.is_len_valid(word)]
+
+        # If all words were of valid length, notify the user
         if not invalid:
             mb.showinfo(
                 "No invalid length words",
-                f"All words are already between {bw.WORD_LENGTH_MIN:,} and {bw.WORD_LENGTH_MAX:,} letters long.",
+                f"All words are already between {bw.WORD_LENGTH_MIN:,} " +
+                f"and {bw.WORD_LENGTH_MAX:,} letters long.",
             )
             return
 
+        # Perform the deletion
         for word in invalid:
             self.__delete_word(word)
 
         # Update the query display
         self.update_query()
 
-        # There are now unsaved changes
-        self.unsaved_changes = True
-
-        if mb.askyesno(
+        # There are now mass unsaved changes
+        self.__mass_unsaved_changes(
             "Invalid length words deleted",
-            f"Found and deleted {len(invalid):,} words of invalid length from the word list. Save changes to disk now?",
-        ):
-            self.save_files()
+            f"Found and deleted {len(invalid):,} words of invalid length " +
+            "from the word list."
+        )
 
     def del_orphaned_defs(self):
         """Find and delete any orphaned definitions (threaded)"""
@@ -1110,24 +1209,50 @@ class Editor(tk.Tk):
         for o in orphaned:
             del self.defs[o]
 
-        # There are now unsaved changes
-        self.unsaved_changes = True
-
-        # Offer to save changes
-        if mb.askyesno(
+        # There are now mass unsaved changes
+        self.__mass_unsaved_changes(
             "Orphaned definitions deleted",
-            f"Found and deleted {len(orphaned):,} orphaned definitions. Save now?",
-        ):
-            self.save_files()
+            f"Found and deleted {len(orphaned):,} orphaned definitions.",
+        )
+
+    def del_dupe_words(self):
+        """Delete any duplicate word listings (threaded)"""
+
+        self.thread_process(self.__del_dupe_words)
+
+    def __del_dupe_words(self):
+        """Delete any duplicate word listings"""
+
+        self.busy_text = "Searching for duplicates..."
+        unduped = set(self.words)  # Sets don't have duplicate entries
+        dupe_count = len(self.words) - len(unduped)
+
+        # No duplicates
+        if not dupe_count:
+            mb.showinfo(
+                "No duplicates found",
+                "All words are only listed once.",
+                )
+            return
+
+        # There were duplicates, so now convert and sort the set
+        self.busy_text = "Ordering unduplicated set..."
+        self.words = list(unduped)
+        self.words.sort()
+
+        # There are now mass unsaved changes.
+        self.__mass_unsaved_changes(
+            "Duplicates deleted",
+            f"Found and removed {dupe_count:,} duplicate listings",
+        )
 
     def auto_define(self):
         """Attempt to automatically define the currently selected word"""
 
-        word = self.selected_word
-        if word == NO_WORD:
+        if self.selected_word == NO_WORD:
             return
 
-        result, success = bw.build_auto_def(word)
+        result, success = bw.build_auto_def(self.selected_word)
         if not success:
             mb.showerror("Could not autodefine", result)
             return
@@ -1140,25 +1265,28 @@ class Editor(tk.Tk):
         self.regulate_def_buttons()
 
     def mass_auto_define(self):
-        """Find all words below the usage threshold and try to define them (threaded)"""
+        """Find all words below the usage threshold,
+            and try to define them (threaded)"""
+
         self.thread_process(self.__mass_auto_define, message="Working...")
 
     def __mass_auto_define(self):
-        """Find all words below the usage threshold and try to define them"""
+        """Find all words below the usage threshold, and try to define them"""
 
         if not bw.HAVE_WORDNET:
             mb.showerror(
                 "No dictionary",
-                "We need to download the NLTK wordnet English dictionary for auto-defining. Please connect to the internet, then restart the application.",
+                "We need to download the NLTK wordnet English dictionary " +
+                "for auto-defining. Please connect to the internet, then " +
+                "restart the application.",
             )
             return
 
         # Find all words below the usage threshold and without a definition
         self.busy_text = "Finding undefined rare words..."
-        defined_words = tuple(self.defs.keys())
+        defined_words = tuple(self.defs)
         words_to_define = [
-            word
-            for word in self.words
+            word for word in self.words
             if bw.get_word_usage(word) < bw.RARE_THRESH
             and bw.binary_search(defined_words, word) is None
         ]
@@ -1168,7 +1296,8 @@ class Editor(tk.Tk):
         if not total:
             mb.showinfo(
                 "No undefined rare words",
-                "All words with a usage metric below the threshold already have a popdef.",
+                "All words with a usage metric below the threshold already " +
+                "have a popdef.",
             )
             return
 
@@ -1182,30 +1311,30 @@ class Editor(tk.Tk):
             else:
                 fails += 1
 
-        self.busy_text = "Sorting popdefs..."
-        self.defs = dict(sorted(self.defs.items()))
-
         if fails == total:
             mb.showerror(
                 "No definitions found",
-                f"Failed to define any of the {total:,} undefined rare words found.",
+                f"Failed to define any of the {total:,} undefined " +
+                "rare words found.",
             )
             return
+
+        # If there were successes, sort the updated popdefs alphabetically
+        self.busy_text = "Sorting popdefs..."
+        self.defs = dict(sorted(self.defs.items()))
 
         if fails:
             mb.showwarning(
                 "Some definitions not found",
-                f"Failed to define {fails:,} of the {total:,} undefined rare words found.",
+                f"Failed to define {fails:,} of the {total:,} undefined " +
+                "rare words found.",
             )
 
         # There are now unsaved changes
-        self.unsaved_changes = True
-
-        if mb.askyesno(
+        self.__mass_unsaved_changes(
             "Operation complete",
-            f"Auto-defined {total - fails:,} words. Save changes to disk now?",
-        ):
-            self.save_files()
+            f"Auto-defined {total - fails:,} words.",
+        )
 
 
 # Create an editor window
