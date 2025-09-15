@@ -33,11 +33,12 @@ Once the program loads the files, you should see a list of words in the left pan
     - Save (Ctrl + S): Save your changes. Automatically asks if you would like to do a backup if the original files are older than my program.
     - Backup existing (Ctrl + B): Copy the existing files to a backup named version in the same directory.
 - The Edit menu provides the following operations:
-    - Delete orphaned definitions: Removes definitions from the popdefs that do not have a word in the wordlist.
-    - Delete words of invalid length: Removes words that BookWorm Deluxe will not allow as moves because of their length.
     - Add several words: Select a text file of new words and add them all.
-    - Delete several words: Select a text file of words and delete them all.
     - Auto-define undefined rare words: Find all words below my arbitrary usage threshold and attempt to auto-define them.
+    - Delete several words: Select a text file of words and delete them all.
+    - Delete words of invalid length: Removes words that BookWorm Deluxe will not allow as moves because of their length.
+    - Delete orphaned definitions: Removes definitions from the popdefs that do not have a word in the wordlist.
+    - Delete duplicate word listings: Make sure that none of the entries in the word list are redundant.
 
 ## Information on antivirus false positives for PyInstaller executables:
 
