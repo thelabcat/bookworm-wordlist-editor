@@ -99,6 +99,12 @@ class Editor(tk.Tk):
 
         self.__busy_text = ""  # Current operations message
 
+        # Menu base name: display label pairs.
+        # Menus must be disabled by display label.
+        self.menu_labels = {}
+
+        self.widgets_to_disable = []  # Widgets to disable when busy
+
         # Handle unsaved changes
         self.__unsaved_changes = False
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
@@ -171,6 +177,7 @@ class Editor(tk.Tk):
 
         # File menu
         self.file_menu = tk.Menu(self.menubar, tearoff=1)
+        self.menu_labels["file"] = "🗃️ File"
 
         # Open
         self.bind("<Control-o>", lambda _: self.load_files(select=True))
@@ -194,10 +201,12 @@ class Editor(tk.Tk):
         self.bind("<Control-b>", self.make_backup)
         self.file_menu.add_command(label="🕞 Backup existing", underline=3, command=self.make_backup)
 
-        self.menubar.add_cascade(label="🗃️ File", menu=self.file_menu)
+        self.menubar.add_cascade(label=self.menu_labels["file"], menu=self.file_menu)
 
         # Edit menu
         self.edit_menu = tk.Menu(self.menubar, tearoff=1)
+        self.menu_labels["edit"] = "🖊️ Edit"
+
         self.edit_menu.add_command(
             label="➕ Add several words", command=self.mass_add_words
         )
@@ -218,10 +227,11 @@ class Editor(tk.Tk):
         self.edit_menu.add_command(
             label="👬 Delete duplicate word listings", command=self.del_dupe_words
         )
-        self.menubar.add_cascade(label="🖊️ Edit", menu=self.edit_menu)
+        self.menubar.add_cascade(label=self.menu_labels["edit"], menu=self.edit_menu)
 
         # Help menu
         self.help_menu = tk.Menu(self.menubar, tearoff=1)
+        self.menu_labels["help"] = "❔ Help"
 
         self.help_menu.add_command(
             label="🪧 About", command=lambda: info.AboutDialogue(self)
@@ -238,11 +248,7 @@ class Editor(tk.Tk):
             foreground="blue",
             command=lambda: webbrowser.open(info.URL.report_issue),
         )
-        self.menubar.add_cascade(label="❔ Help", menu=self.help_menu)
-
-        self.menubar_entries = ("🗃️ File", "🖊️ Edit", "❔ Help")  # Menus to disable when busy
-
-        self.widgets_to_disable = []  # Widgets to disable when busy
+        self.menubar.add_cascade(label=self.menu_labels["help"], menu=self.help_menu)
 
         # Frame for list
         self.list_frame = tk.Frame(self)
@@ -421,7 +427,7 @@ class Editor(tk.Tk):
 
         # Enable or disable all the widgets
         new_state = (tk.NORMAL, tk.DISABLED)[int(new)]
-        for entry in self.menubar_entries:
+        for entry in self.menu_labels.values():
             self.menubar.entryconfig(entry, state=new_state)
         for widget in self.widgets_to_disable:
             widget.config(state=new_state)
