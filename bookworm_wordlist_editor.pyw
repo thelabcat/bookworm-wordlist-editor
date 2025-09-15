@@ -206,7 +206,7 @@ class Editor(tk.Tk):
         self.unique_disable_handlers()
 
     @property
-    def busy_text(self):
+    def busy_text(self) -> str:
         """Current operations message"""
         return self.__busy_text
 
@@ -287,12 +287,12 @@ class Editor(tk.Tk):
             button.config(state=new_state)
 
     @property
-    def wordlist_abs_path(self):
+    def wordlist_abs_path(self) -> str:
         """The absolute path of the wordlist file"""
         return op.join(self.game_path, bw.WORDLIST_FILE)
 
     @property
-    def popdefs_abs_path(self):
+    def popdefs_abs_path(self) -> str:
         """The absolute path of the popdefs file"""
         return op.join(self.game_path, bw.POPDEFS_FILE)
 
@@ -319,7 +319,7 @@ class Editor(tk.Tk):
 
         self.thread_process(lambda: gui_heavy_ops.save_files(self, backup))
 
-    def make_backup(self):
+    def make_backup(self) -> bool:
         """Save a backup of the files, with a timestamp.
 
         Returns:
@@ -410,7 +410,7 @@ class Editor(tk.Tk):
             self.selected_word = NO_WORD
 
     @property
-    def selected_word(self):
+    def selected_word(self) -> str:
         """The currently selected word.
 
         Returns:

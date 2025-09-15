@@ -1,7 +1,8 @@
 # !/usr/bin/env python3
 """BookWorm Utilities
 
-Tools for loading, editing, and saving the wordlist of BookWorm Deluxe
+Tools for loading, editing, and saving the wordlist and popdefs of
+BookWorm Deluxe.
 
 
 The rules for unpacking the dictionary are simple:
@@ -56,7 +57,8 @@ WHITESPACE_PATTERN = re.compile(r"\s+")
 # With internet, it will return True even if we already had wordnet.
 nltk.download("wordnet")
 try:
-    # Word part-of-speech's that NLTK wordnet may return, and their abbreviations
+    # Word part-of-speech's that NLTK wordnet may return, and their
+    # abbreviations to use for in-game definitions.
     WORD_POS = {
         wordnet.NOUN: "n.",
         wordnet.VERB: "v.",
@@ -69,7 +71,8 @@ try:
     }
     HAVE_WORDNET = True
 
-# Referencing word part-of-speech's in wordnet if we don't have wordnet raises LookupError.
+# Referencing word part-of-speech's in wordnet when we don't have wordnet
+# raises a LookupError.
 except LookupError:
     warnings.warn("NLTK wordnet load failed with LookupError.")
     print("Auto definition will not be available.")
@@ -126,12 +129,11 @@ def is_game_path_valid(path: str) -> bool:
 # Allow system environment variable to override normal default for game path
 ENV_GAME_PATH = os.environ.get("BOOKWORM_GAME_PATH")
 if ENV_GAME_PATH:
+    ENV_GAME_PATH_MSG = f"System set the game path default to {ENV_GAME_PATH}"
+
     # The environment variable points to a nonexistent path
     if not op.exists(ENV_GAME_PATH):
-        print(
-            f"System tried to set game path default to {ENV_GAME_PATH} " +
-            "but it does not exist."
-            )
+        print(ENV_GAME_PATH_MSG, "but it does not exist.")
         GAME_PATH_DEFAULT = GAME_PATH_OS_DEFAULT
 
     # The environment variable points to a real path, but not a valid game path
@@ -139,22 +141,22 @@ if ENV_GAME_PATH:
         # The default game path is valid
         if is_game_path_valid(GAME_PATH_OS_DEFAULT):
             print(
-                f"System tried to set game path default to {ENV_GAME_PATH} " +
-                f"but it is not valid while {GAME_PATH_OS_DEFAULT} is."
+                ENV_GAME_PATH_MSG,
+                f"but it is not valid while {GAME_PATH_OS_DEFAULT} is.",
                 )
             GAME_PATH_DEFAULT = GAME_PATH_OS_DEFAULT
 
         # The default game path isn't any better than the one provided
         else:
             print(
-                f"System tried to set game path default to {ENV_GAME_PATH} " +
+                ENV_GAME_PATH_MSG +
                 "which is not a valid game path, but it's the best we know."
                 )
             GAME_PATH_DEFAULT = ENV_GAME_PATH
 
     # The environment variable was set validly
     else:
-        print("System set game path default to", ENV_GAME_PATH)
+        print(ENV_GAME_PATH_MSG)
         GAME_PATH_DEFAULT = ENV_GAME_PATH
 
 # The environment variable was not set
@@ -347,7 +349,7 @@ def get_word_usage(word: str) -> float:
     return zipf_frequency(word, LANG)
 
 
-def binary_search(elements, value):
+def binary_search(elements, value) -> int | None:
     """A binary search implementation.
         By Bartosz Zaczyński on <https://realpython.com/>
 
