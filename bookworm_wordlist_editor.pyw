@@ -701,17 +701,17 @@ class Editor(tk.Tk):
             event (object): Unused, receives Tkinter callback event data.
                 Defaults to None."""
 
-        # Display the current word
-        self.word_display.config(text=self.selected_word)
-
         # Load and display the current definition
         self.load_definition()
 
-        # If no word is selected, clear the usage statistic display
+        # If no word is selected, clear the usage display
+        # and just show NO_WORD in the main display
         if self.selected_word == NO_WORD:
             self.usage_display.config(text="")
+            word_disp = self.selected_word
 
         # Otherwise, load and display usage statistics
+        # and add quotes around the main display
         else:
             usage = bw.get_word_usage(self.selected_word)
             self.usage_display.config(
@@ -720,6 +720,10 @@ class Editor(tk.Tk):
                 # Make the usage display colored based on a rarity threshold
                 fg=RARE_COLS[int(usage < bw.RARE_THRESH)],
             )
+            word_disp = f'"{self.selected_word}"'
+
+        # Set the main display to the result regardless
+        self.word_display.config(text=word_disp)
 
         # Enable or disable the word handling buttons based on the selection
         self.regulate_word_buttons()
