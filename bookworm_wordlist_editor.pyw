@@ -525,10 +525,10 @@ class Editor(tk.Tk):
                 Defaults to False, cancelling is an option."""
 
         self.thread_process(
-            lambda: self.__load_files(select, do_or_die), message="Loading..."
+            lambda: self._load_files(select, do_or_die), message="Loading..."
         )
 
-    def __load_files(self, select: bool = True, do_or_die: bool = False):
+    def _load_files(self, select: bool = True, do_or_die: bool = False):
         """Load the wordlist and the popdefs
 
         Args:
@@ -610,9 +610,9 @@ class Editor(tk.Tk):
             backup (bool): Wether or not to copy the original files to a backup name.
                 Defaults to False."""
 
-        self.thread_process(lambda: self.__save_files(backup))
+        self.thread_process(lambda: self._save_files(backup))
 
-    def __save_files(self, backup: bool = False):
+    def _save_files(self, backup: bool = False):
         """Save the worldist and popdefs.
 
         Args:
@@ -985,9 +985,9 @@ class Editor(tk.Tk):
     def mass_add_words(self):
         """Add a whole file's worth of words (threaded)"""
 
-        self.thread_process(self.__mass_add_words)
+        self.thread_process(self._mass_add_words)
 
-    def __mass_add_words(self):
+    def _mass_add_words(self):
         """Add a whole file's worth of words"""
 
         alpha_words = self.__load_alpha_file()
@@ -1061,9 +1061,9 @@ class Editor(tk.Tk):
     def mass_delete_words(self):
         """Delete a whole file's worth of words (threaded)"""
 
-        self.thread_process(self.__mass_delete_words)
+        self.thread_process(self._mass_delete_words)
 
-    def __mass_delete_words(self):
+    def _mass_delete_words(self):
         """Delete a whole file's worth of words"""
 
         # Get the list of words to delete
@@ -1152,9 +1152,9 @@ class Editor(tk.Tk):
     def del_invalid_len_words(self):
         """Remove all words of invalid length from the wordlist (threaded)"""
 
-        self.thread_process(self.__del_invalid_len_words)
+        self.thread_process(self._del_invalid_len_words)
 
-    def __del_invalid_len_words(self):
+    def _del_invalid_len_words(self):
         """Remove all words of invalid length from the wordlist"""
 
         # Comprehensively filter to words of invalid length
@@ -1186,9 +1186,9 @@ class Editor(tk.Tk):
     def del_orphaned_defs(self):
         """Find and delete any orphaned definitions (threaded)"""
 
-        self.thread_process(self.__del_orphaned_defs)
+        self.thread_process(self._del_orphaned_defs)
 
-    def __del_orphaned_defs(self):
+    def _del_orphaned_defs(self):
         """Find and delete any orphaned definitions"""
 
         self.busy_text = "Finding orphaned definitions..."
@@ -1218,9 +1218,9 @@ class Editor(tk.Tk):
     def del_dupe_words(self):
         """Delete any duplicate word listings (threaded)"""
 
-        self.thread_process(self.__del_dupe_words)
+        self.thread_process(self._del_dupe_words)
 
-    def __del_dupe_words(self):
+    def _del_dupe_words(self):
         """Delete any duplicate word listings"""
 
         self.busy_text = "Searching for duplicates..."
@@ -1268,9 +1268,9 @@ class Editor(tk.Tk):
         """Find all words below the usage threshold,
             and try to define them (threaded)"""
 
-        self.thread_process(self.__mass_auto_define, message="Working...")
+        self.thread_process(self._mass_auto_define, message="Working...")
 
-    def __mass_auto_define(self):
+    def _mass_auto_define(self):
         """Find all words below the usage threshold, and try to define them"""
 
         if not bw.HAVE_WORDNET:
