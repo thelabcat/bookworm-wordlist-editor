@@ -217,7 +217,9 @@ def __build_word_edit_pane(self: tk.Tk, word_edit_frame: tk.Frame):
     word_edit_frame.columnconfigure(1, weight=1)
 
     # Display the currently selected word
-    self.word_disp_label = tk.Label(self.word_disp_frame, textvariable=self.word_disp_str)
+    self.word_disp_label = tk.Label(
+        self.word_disp_frame, textvariable=self.word_disp_str
+        )
     self.word_disp_label.grid(row=0, column=0, sticky=tk.NSEW)
     self.widgets_to_disable.append(self.word_disp_label)
     self.word_disp_frame.columnconfigure(0, weight=1)
@@ -253,7 +255,9 @@ def __build_word_edit_pane(self: tk.Tk, word_edit_frame: tk.Frame):
     self.widgets_to_disable.append(self.reset_def_bttn)
 
     self.save_def_bttn = tk.Button(
-        word_edit_frame, text="💾 Save definition", command=self.update_definition
+        word_edit_frame,
+        text="💾 Save definition",
+        command=self.update_definition
     )
     self.save_def_bttn.grid(row=2, column=1, sticky=tk.NSEW)
     self.widgets_to_disable.append(self.save_def_bttn)
