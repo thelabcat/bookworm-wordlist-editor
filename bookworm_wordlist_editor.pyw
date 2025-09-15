@@ -165,75 +165,82 @@ class Editor(tk.Tk):
     def build(self):
         """Construct GUI"""
 
-        # Set up keyboard shortcuts
-        self.bind("<Control-o>", lambda _: self.load_files(select=True))
-        self.bind("<Control-r>", lambda _: self.load_files(select=False))
-        self.bind("<Control-s>", self.save_files)
-        self.bind("<Control-b>", self.make_backup)
-
         # Menubar
         self.menubar = tk.Menu(self)
         self["menu"] = self.menubar
 
         # File menu
         self.file_menu = tk.Menu(self.menubar, tearoff=1)
+
+        # Open
+        self.bind("<Control-o>", lambda _: self.load_files(select=True))
         self.file_menu.add_command(
-            label="Open", underline=0, command=lambda: self.load_files(select=True)
+            label="📂 Open", underline=3, command=lambda: self.load_files(select=True)
         )
+
+        # Reload
+        self.bind("<Control-r>", lambda _: self.load_files(select=False))
         self.file_menu.add_command(
-            label="Reload", underline=0, command=lambda: self.load_files(select=False)
+            label="🔃 Reload", underline=3, command=lambda: self.load_files(select=False)
         )
-        self.file_menu.add_command(label="Save", underline=0, command=self.save_files)
+
+        # Save
+        self.bind("<Control-s>", self.save_files)
+        self.file_menu.add_command(label="💾 Save", underline=3, command=self.save_files)
 
         self.file_menu.add_separator()
-        self.file_menu.add_command(label="Backup existing", underline=0, command=self.make_backup)
-        self.menubar.add_cascade(label="File", menu=self.file_menu)
+
+        # Backup existing
+        self.bind("<Control-b>", self.make_backup)
+        self.file_menu.add_command(label="🕞 Backup existing", underline=3, command=self.make_backup)
+
+        self.menubar.add_cascade(label="🗃️ File", menu=self.file_menu)
 
         # Edit menu
         self.edit_menu = tk.Menu(self.menubar, tearoff=1)
         self.edit_menu.add_command(
-            label="Add several words", command=self.mass_add_words
+            label="➕ Add several words", command=self.mass_add_words
         )
         self.edit_menu.add_command(
-            label="Auto-define undefined rare words", command=self.mass_auto_define
+            label="📚 Auto-define undefined rare words", command=self.mass_auto_define
         )
 
         self.edit_menu.add_separator()
         self.edit_menu.add_command(
-            label="Delete several words", command=self.mass_delete_words
+            label="🗑️ Delete several words", command=self.mass_delete_words
         )
         self.edit_menu.add_command(
-            label="Delete words of invalid length", command=self.del_invalid_len_words
+            label="📏 Delete words of invalid length", command=self.del_invalid_len_words
         )
         self.edit_menu.add_command(
-            label="Delete orphaned definitions", command=self.del_orphaned_defs
+            label="⛓️‍💥 Delete orphaned definitions", command=self.del_orphaned_defs
         )
         self.edit_menu.add_command(
-            label="Delete duplicate word listings", command=self.del_dupe_words
+            label="👬 Delete duplicate word listings", command=self.del_dupe_words
         )
-        self.menubar.add_cascade(label="Edit", menu=self.edit_menu)
+        self.menubar.add_cascade(label="🖊️ Edit", menu=self.edit_menu)
 
         # Help menu
         self.help_menu = tk.Menu(self.menubar, tearoff=1)
 
         self.help_menu.add_command(
-            label="About", command=lambda: info.AboutDialogue(self)
+            label="🪧 About", command=lambda: info.AboutDialogue(self)
         )
 
         self.help_menu.add_separator()
         self.help_menu.add_command(
-            label="How to use",
+            label="📖 How to use",
             foreground="blue",
             command=lambda: webbrowser.open(info.URL.how_to_use),
         )
         self.help_menu.add_command(
-            label="Report an issue",
+            label="⁉️ Report an issue",
             foreground="blue",
             command=lambda: webbrowser.open(info.URL.report_issue),
         )
-        self.menubar.add_cascade(label="Help", menu=self.help_menu)
+        self.menubar.add_cascade(label="❔ Help", menu=self.help_menu)
 
-        self.menubar_entries = ("File", "Edit", "Help")  # Menus to disable when busy
+        self.menubar_entries = ("🗃️ File", "🖊️ Edit", "❔ Help")  # Menus to disable when busy
 
         self.widgets_to_disable = []  # Widgets to disable when busy
 
@@ -248,7 +255,7 @@ class Editor(tk.Tk):
         self.search_frame.grid(row=0, columnspan=2, sticky=tk.NSEW)
 
         # Search system
-        self.search_label = tk.Label(self.search_frame, text="Search:", anchor=tk.W)
+        self.search_label = tk.Label(self.search_frame, text="Search 🔎:", anchor=tk.W)
         self.search_label.grid(row=0, column=0, sticky=tk.NSEW)
 
         self.search = tk.StringVar()
@@ -258,7 +265,7 @@ class Editor(tk.Tk):
         self.search_frame.columnconfigure(1, weight=1)
 
         self.search_clear_bttn = tk.Button(
-            self.search_frame, text="X", command=lambda: self.search.set("")
+            self.search_frame, text="🧹", command=lambda: self.search.set("")
         )
         self.search_clear_bttn.grid(row=0, column=2, sticky=tk.NSEW)
         self.widgets_to_disable += [
@@ -290,7 +297,7 @@ class Editor(tk.Tk):
 
         # Button to add a word
         self.add_word_bttn = tk.Button(
-            self.list_frame, text="Add word", command=self.add_word
+            self.list_frame, text="➕ Add word", command=self.add_word
         )
         self.add_word_bttn.grid(row=2, columnspan=2, sticky=tk.NSEW)
         self.widgets_to_disable.append(self.add_word_bttn)
@@ -333,25 +340,25 @@ class Editor(tk.Tk):
         self.worddef_frame.columnconfigure(1, weight=1)
 
         self.reset_def_bttn = tk.Button(
-            self.worddef_frame, text="Reset definition", command=self.selection_updated
+            self.worddef_frame, text="🔃 Reset definition", command=self.selection_updated
         )
         self.reset_def_bttn.grid(row=2, column=0, sticky=tk.NSEW)
         self.widgets_to_disable.append(self.reset_def_bttn)
 
         self.save_def_bttn = tk.Button(
-            self.worddef_frame, text="Save definition", command=self.update_definition
+            self.worddef_frame, text="💾 Save definition", command=self.update_definition
         )
         self.save_def_bttn.grid(row=2, column=1, sticky=tk.NSEW)
         self.widgets_to_disable.append(self.save_def_bttn)
 
         self.autodef_bttn = tk.Button(
-            self.worddef_frame, text="Auto-define", command=self.auto_define
+            self.worddef_frame, text="📚 Auto-define", command=self.auto_define
         )
         self.autodef_bttn.grid(row=3, columnspan=2, sticky=tk.NSEW)
         self.widgets_to_disable.append(self.autodef_bttn)
 
         self.del_bttn = tk.Button(
-            self.worddef_frame, text="Delete word", command=self.delete_selected_word
+            self.worddef_frame, text="🗑️ Delete word", command=self.delete_selected_word
         )
         self.del_bttn.grid(row=4, columnspan=2, sticky=tk.NSEW)
         self.widgets_to_disable.append(self.del_bttn)
