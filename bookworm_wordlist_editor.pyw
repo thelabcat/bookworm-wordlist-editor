@@ -25,9 +25,10 @@ import threading
 import tkinter as tk
 from tkinter import messagebox as mb
 from tkinter import simpledialog as dialog
+from tkinter import ttk
 import time
+import webbrowser
 import bookworm_utils as bw
-import gui_build
 import gui_heavy_ops
 import info
 
@@ -46,6 +47,7 @@ UNSAVED_WINDOW_TITLE = (
 RARE_COLS = ("#000", "#c00")  # Index with int(<is rare?>)
 WORDFREQ_DISP_PREFIX = "Usage: "
 NO_WORD = "(no word selected)"
+DEFFIELD_SIZE = (15, 5)
 
 
 class Editor(tk.Tk):
@@ -62,7 +64,8 @@ class Editor(tk.Tk):
 
         self.thread = None  # Any thread the GUI might spawn
 
-        self.__busy = False  # Is the GUI currently busy (all widgets disabled)?
+        # Is the GUI currently busy (all widgets disabled)?
+        self.__busy = False
 
         self.__busy_text = ""  # Current operations message
 
@@ -86,7 +89,7 @@ class Editor(tk.Tk):
         # Make the GUI
         self.title(WINDOW_TITLE)
         self.iconphoto(True, tk.PhotoImage(file=info.ICON_PATH))
-        gui_build.build(self)
+        self.build()
 
         # Lock built size as minimum
         self.update()
@@ -98,6 +101,278 @@ class Editor(tk.Tk):
 
         # Start the GUI loop
         self.mainloop()
+
+    def __build_menubar(self):
+        """Construct the GUI's menubar"""
+
+        # Base menubar
+        self.menubar = tk.Menu(self)
+        self["menu"] = self.menubar
+
+        # File menu
+        self.file_menu = tk.Menu(self.menubar, tearoff=1)
+        self.menu_labels["file"] = "🗃 File"
+
+        # Open
+        self.bind("<Control-o>", lambda _: self.load_files(select=True))
+        self.file_menu.add_command(
+            label="📂 Open",
+            underline=3,
+            command=lambda: self.load_files(select=True),
+        )
+
+        # Reload
+        self.bind("<Control-r>", lambda _: self.load_files(select=False))
+        self.file_menu.add_command(
+            label="🔃 Reload",
+            underline=3,
+            command=lambda: self.load_files(select=False),
+        )
+
+        # Save
+        self.bind("<Control-s>", lambda _: self.save_files)
+        self.file_menu.add_command(
+            label="💾 Save",
+            underline=3,
+            command=self.save_files
+            )
+
+        self.file_menu.add_separator()
+
+        # Backup existing
+        self.bind("<Control-b>", self.make_backup)
+        self.file_menu.add_command(
+            label="🕞 Backup existing",
+            underline=3,
+            command=self.make_backup
+            )
+
+        self.menubar.add_cascade(
+            label=self.menu_labels["file"],
+            menu=self.file_menu
+            )
+
+        # Edit menu
+        self.edit_menu = tk.Menu(self.menubar, tearoff=1)
+        self.menu_labels["edit"] = "🖊 Edit"
+
+        self.edit_menu.add_command(
+            label="➕ Add several words", command=self.mass_add_words
+        )
+        self.edit_menu.add_command(
+            label="📚 Auto-define undefined rare words",
+            command=self.mass_auto_define
+        )
+
+        self.edit_menu.add_separator()
+        self.edit_menu.add_command(
+            label="🗑 Delete several words", command=self.mass_delete_words
+        )
+        self.edit_menu.add_command(
+            label="📏 Delete words of invalid length",
+            command=self.del_invalid_len_words
+        )
+        self.edit_menu.add_command(
+            label="⛓️‍💥 Delete orphaned definitions",
+            command=self.del_orphaned_defs
+        )
+        self.edit_menu.add_command(
+            label="👬 Delete duplicate word listings",
+            command=self.del_dupe_words
+        )
+        self.menubar.add_cascade(
+            label=self.menu_labels["edit"], menu=self.edit_menu
+            )
+
+        # Help menu
+        self.help_menu = tk.Menu(self.menubar, tearoff=1)
+        self.menu_labels["help"] = "❔ Help"
+
+        self.help_menu.add_command(
+            label="ⓘ About", command=lambda: info.AboutDialogue(self)
+        )
+
+        self.help_menu.add_separator()
+        self.help_menu.add_command(
+            label="📖 How to use",
+            foreground="blue",
+            command=lambda: webbrowser.open(info.URL.how_to_use),
+        )
+        self.help_menu.add_command(
+            label="⁉️ Report an issue",
+            foreground="blue",
+            command=lambda: webbrowser.open(info.URL.report_issue),
+        )
+        self.menubar.add_cascade(
+            label=self.menu_labels["help"], menu=self.help_menu
+            )
+
+
+    def __build_list_pane(self):
+        """Construct the word list pane"""
+
+        # Subframe for search system
+        self.search_frame = tk.Frame(self.list_frame)
+        self.search_frame.grid(row=0, columnspan=2, sticky=tk.NSEW)
+
+        # Search system
+        self.search_label = tk.Label(
+            self.search_frame, text="Search 🔎:", anchor=tk.W
+            )
+        self.search_label.grid(row=0, column=0, sticky=tk.NSEW)
+        self.search_entry = tk.Entry(self.search_frame, textvariable=self.search_str)
+        self.search_entry.grid(row=0, column=1, sticky=tk.NSEW)
+        self.search_frame.columnconfigure(1, weight=1)
+
+        self.search_clear_bttn = ttk.Button(
+            self.search_frame,
+            text="🧹",
+            width=3,
+            command=lambda: self.search_str.set("")
+        )
+        self.search_clear_bttn.grid(row=0, column=2, sticky=tk.NSEW)
+        self.widgets_to_disable += [
+            self.search_label,
+            self.search_entry,
+            self.search_clear_bttn,
+        ]
+
+        # Word list display
+        self.query_box = tk.Listbox(
+            self.list_frame,
+            listvariable=self.query_list,
+            height=10,
+            selectmode=tk.SINGLE,
+            exportselection=False,
+        )
+        self.query_box.bind(
+            "<<ListboxSelect>>",
+            lambda _: self.selection_updated(),
+            )
+        self.query_box.grid(row=1, column=0, sticky=tk.NSEW)
+        self.widgets_to_disable.append(self.query_box)
+
+        self.query_box_scrollbar = tk.Scrollbar(
+            self.list_frame, orient=tk.VERTICAL, command=self.query_box.yview
+        )
+        self.query_box["yscrollcommand"] = self.query_box_scrollbar.set
+        self.query_box_scrollbar.grid(row=1, column=1, sticky=tk.N + tk.S + tk.E)
+        # Scrollbar cannot be state disabled
+        # self.widgets_to_disable.append(self.query_box_scrollbar)
+        self.list_frame.rowconfigure(1, weight=1)
+
+        # Button to add a word
+        self.add_word_bttn = tk.Button(
+            self.list_frame, text="➕ Add word", command=self.add_word
+        )
+        self.add_word_bttn.grid(row=2, columnspan=2, sticky=tk.NSEW)
+        self.widgets_to_disable.append(self.add_word_bttn)
+        self.list_frame.columnconfigure(0, weight=1)
+
+    def __build_word_edit_pane(self):
+        """Construct the selected word editing pane"""
+
+        # Subframe for word and usage display
+        self.word_disp_frame = tk.Frame(self.word_edit_frame)
+        self.word_disp_frame.grid(row=0, columnspan=2, sticky=tk.NSEW)
+        self.word_edit_frame.columnconfigure(0, weight=1)
+        self.word_edit_frame.columnconfigure(1, weight=1)
+
+        # Display the currently selected word
+        self.word_disp_label = tk.Label(
+            self.word_disp_frame, textvariable=self.word_disp_str
+            )
+        self.word_disp_label.grid(row=0, column=0, sticky=tk.NSEW)
+        self.widgets_to_disable.append(self.word_disp_label)
+        self.word_disp_frame.columnconfigure(0, weight=1)
+
+        # Display how often that word is used
+        self.usage_disp_label = tk.Label(
+            self.word_disp_frame,
+            textvariable=self.usage_disp_str,
+            anchor=tk.E
+            )
+        self.usage_disp_label.grid(row=0, column=1, sticky=tk.NSEW)
+        self.widgets_to_disable.append(self.usage_disp_label)
+
+        # Allow editing of the popdef for the word
+        self.def_field = tk.Text(
+            self.word_edit_frame,
+            width=DEFFIELD_SIZE[0],
+            height=DEFFIELD_SIZE[1],
+            wrap=tk.WORD,
+        )
+        self.def_field.grid(row=1, columnspan=2, sticky=tk.NSEW)
+        self.widgets_to_disable.append(self.def_field)
+        self.word_edit_frame.rowconfigure(1, weight=1)
+        self.word_edit_frame.columnconfigure(0, weight=1)
+        self.word_edit_frame.columnconfigure(1, weight=1)
+
+        self.reset_def_bttn = tk.Button(
+            self.word_edit_frame,
+            text="🔃 Reset definition",
+            command=self.selection_updated,
+        )
+        self.reset_def_bttn.grid(row=2, column=0, sticky=tk.NSEW)
+        self.widgets_to_disable.append(self.reset_def_bttn)
+
+        self.save_def_bttn = tk.Button(
+            self.word_edit_frame,
+            text="💾 Save definition",
+            command=self.update_definition
+        )
+        self.save_def_bttn.grid(row=2, column=1, sticky=tk.NSEW)
+        self.widgets_to_disable.append(self.save_def_bttn)
+
+        self.autodef_bttn = tk.Button(
+            self.word_edit_frame,
+            text="📚 Auto-define",
+            command=self.auto_define,
+        )
+        self.autodef_bttn.grid(row=3, columnspan=2, sticky=tk.NSEW)
+        self.widgets_to_disable.append(self.autodef_bttn)
+
+        self.del_bttn = tk.Button(
+            self.word_edit_frame,
+            text="🗑 Delete word",
+            command=self.delete_selected_word,
+        )
+        self.del_bttn.grid(row=4, columnspan=2, sticky=tk.NSEW)
+        self.widgets_to_disable.append(self.del_bttn)
+
+    def build(self):
+        """Construct the GUI"""
+
+        self.__build_menubar()
+
+        # Left-hand pane, for list
+        self.list_frame = tk.Frame(self)
+        self.list_frame.grid(row=0, column=0, sticky=tk.NSEW)
+        self.columnconfigure(0, weight=1)
+        self.__build_list_pane()
+
+        # Right-hand pane, for single word edit functions
+        self.word_edit_frame = tk.Frame(self)
+        self.word_edit_frame.grid(row=0, column=1, sticky=tk.NSEW)
+        self.word_edit_frame.bind_all(
+            "<Key>",
+            lambda _: self.regulate_def_buttons(),
+            )
+        self.columnconfigure(1, weight=1)
+        self.__build_word_edit_pane()
+
+        # Expand those two panes vertically
+        self.rowconfigure(0, weight=1)
+
+        # Status display footer
+        self.status_displaytext = tk.StringVar(self)
+        self.status_label = tk.Label(
+            self,
+            textvariable=self.status_displaytext,
+            anchor=tk.W,
+            relief="sunken"
+        )
+        self.status_label.grid(row=1, column=0, columnspan=2, sticky=tk.EW)
 
     @property
     def unsaved_changes(self) -> bool:
@@ -300,7 +575,8 @@ class Editor(tk.Tk):
         """Load the wordlist and the popdefs (threaded)
 
         Args:
-            select (bool): Wether or not we need to prompt the user to select a new path.
+            select (bool): Wether or not we need to prompt the user to select
+                a new path.
                 Defaults to True.
             do_or_die(bool): Wether or not cancelling is not an option.
                 Defaults to False, cancelling is an option."""
@@ -314,7 +590,8 @@ class Editor(tk.Tk):
         """Save the worldist and popdefs (threaded).
 
         Args:
-            backup (bool): Wether or not to copy the original files to a backup name.
+            backup (bool): Wether or not to copy the original files to a
+                backup name.
                 Defaults to False."""
 
         self.thread_process(lambda: gui_heavy_ops.save_files(self, backup))
@@ -329,7 +606,8 @@ class Editor(tk.Tk):
         if not bw.is_game_path_valid(self.game_path):
             mb.showerror(
                 "Backup failed",
-                "Could not back up the original files because they have disappeared.",
+                "Could not back up the original files " +
+                "because they have disappeared.",
             )
             return False
 
@@ -393,7 +671,8 @@ class Editor(tk.Tk):
         if search:
             query = [word for word in self.words if search in word]
 
-            # Sort search results primarily by how close the search query is to the beginning
+            # Sort search results primarily by how close
+            # the search query is to the beginning.
             query.sort(key=lambda x: x.index(search))
 
         # The search was cleared
@@ -403,7 +682,8 @@ class Editor(tk.Tk):
         # Update the query list
         self.query_list.set(query)
 
-        # There was a search entered, and it returned values, highlight the top result
+        # There was a search entered, and it returned values.
+        # Highlight the top result.
         if search and query:
             self.selected_word = query[0]
 
