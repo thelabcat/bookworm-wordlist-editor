@@ -34,6 +34,7 @@ S.D.G.
 
 import bisect
 import getpass
+import os
 import os.path as op
 from pathlib import Path
 import platform
@@ -87,15 +88,78 @@ WORD_LENGTH_MAX = 12
 # File paths and related info
 SYS_USER = getpass.getuser()
 
-# Get the default game path based on the OS
-GAME_PATH_DEFAULT = {
-    "Linux": f"/home/{SYS_USER}/.wine/drive_c/Program Files/PopCap Games/BookWorm Deluxe/",
-    "Darwin": f"/Users/{SYS_USER}/.wine/drive_c/Program Files/PopCap Games/BookWorm Deluxe/",
-    "Windows": "C:\\Program Files\\PopCap Games\\BookWorm Deluxe\\",
+# Default game path inside C drive
+GAME_PATH_C = Path("Program Files", "PopCap Games", "BookWorm Deluxe")
+
+# Default game path inside a *NIX all-users directory (to default Wine prefix)
+GAME_PATH_NIX_USERS = Path(SYS_USER, ".wine", "drive_c").joinpath(GAME_PATH_C)
+
+# Default game path based on the OS
+GAME_PATH_OS_DEFAULT = {
+    "Linux": Path("/home").joinpath(GAME_PATH_NIX_USERS),
+    "Darwin": Path("/Users").joinpath(GAME_PATH_NIX_USERS),
+    "Windows": Path("C:").joinpath(GAME_PATH_C),
 }[platform.system()]
 
+# Tkinter file dialog types filter for plain text files
+TEXT_FILETYPE = [("Plain text", ".txt")]
+
+# Names of the two game files we can edit
 WORDLIST_FILE = "wordlist.txt"
 POPDEFS_FILE = "popdefs.txt"
+
+
+def is_game_path_valid(path: str) -> bool:
+    """Check if the wordlist and popdefs files exist at the given path
+
+    Args:
+        path (str): A complete path to a folder, allegedly the game's.
+
+    Returns:
+        valid (bool): If we found the two files."""
+
+    return op.exists(op.join(path, WORDLIST_FILE)) and op.exists(
+        op.join(path, POPDEFS_FILE)
+    )
+
+
+# Allow system environment variable to override normal default for game path
+ENV_GAME_PATH = os.environ.get("BOOKWORM_GAME_PATH")
+if ENV_GAME_PATH:
+    # The environment variable points to a nonexistent path
+    if not op.exists(ENV_GAME_PATH):
+        print(
+            f"System tried to set game path default to {ENV_GAME_PATH} " +
+            "but it does not exist."
+            )
+        GAME_PATH_DEFAULT = GAME_PATH_OS_DEFAULT
+
+    # The environment variable points to a real path, but not a valid game path
+    elif not is_game_path_valid(ENV_GAME_PATH):
+        # The default game path is valid
+        if is_game_path_valid(GAME_PATH_OS_DEFAULT):
+            print(
+                f"System tried to set game path default to {ENV_GAME_PATH} " +
+                f"but it is not valid while {GAME_PATH_OS_DEFAULT} is."
+                )
+            GAME_PATH_DEFAULT = GAME_PATH_OS_DEFAULT
+
+        # The default game path isn't any better than the one provided
+        else:
+            print(
+                f"System tried to set game path default to {ENV_GAME_PATH} " +
+                "which is not a valid game path, but it's the best we know."
+                )
+            GAME_PATH_DEFAULT = ENV_GAME_PATH
+
+    # The environment variable was set validly
+    else:
+        print("System set game path default to", ENV_GAME_PATH)
+        GAME_PATH_DEFAULT = ENV_GAME_PATH
+
+# The environment variable was not set
+else:
+    GAME_PATH_DEFAULT = GAME_PATH_OS_DEFAULT
 
 # Encoding to use when opening the wordlist and popdefs files
 WORDLIST_ENC = "utf-8"
@@ -119,11 +183,12 @@ def unpack_wordlist(wordlist: str) -> list:
             continue
 
         # Parse any numbers at the beginning of the listing as the copy count
+        i = 0  # Ensure the variable exists.
         for i, char in enumerate(listing):
             if char not in NUMERIC:
                 break  # i is now the index of the first letter in the listing
 
-        # set copystr to a string of any numbers at the beginning of the listing
+        # Set copystr to any digits at the beginning of the listing
         copystr = listing[:i]
 
         if copystr:  # If there is a new copy count, don't reuse the last one
@@ -139,7 +204,7 @@ def unpack_wordlist(wordlist: str) -> list:
 
         else:
             raise ValueError(
-                "Copy count is {copy} at the first word but there are no words yet."
+                "Copy count is {copy} at the first word: Nothing to copy from."
             )
 
     return words
@@ -157,11 +222,11 @@ def pack_wordlist(words: list[str]) -> str:
     # Each packed word listing in the new file
     listings = []
 
-    # The previous number of letters copied from the word(s) before the current word
+    # The number of letters copied to the word before the current one
     oldcopy = 0
 
     for i, new_word in enumerate(words):
-        # The first word cannot possibly copy anything, and should be listed whole
+        # The first word cannot possibly copy anything: Should be listed whole
         if i == 0:
             listings.append(new_word)
             old_word = new_word
@@ -169,14 +234,16 @@ def pack_wordlist(words: list[str]) -> str:
 
         # Compare the new word with the old one, one letter at a time,
         # only going to the end of the shortest of the two words
+        copy = 0  # Ensure the variable exists.
         for copy, letters in enumerate(zip(old_word, new_word)):
             # Compare the two letters at the same position from each word
             if letters[0] != letters[1]:
-                # copy is now set to the index of the first letter the new word does not have in common with the old one
+                # copy is now set to the index of the first letter that the
+                # new word does not have in common with the old one
                 break
 
-        # Only include the copy count in the listing if it is different from the old copy count
-        # Only include the differing letters of the new word
+        # Only include the copy count in the listing if it has changed,
+        # and only include the differing letters of the new word.
         listings.append(str(copy) * (copy != oldcopy) + new_word[copy:])
         oldcopy = copy
         old_word = new_word
@@ -193,7 +260,8 @@ def unpack_popdefs(popdefs: str) -> dict[str, str]:
     Returns:
         definitions (dict[str, str]): The parsed popup definitions."""
 
-    # Split all non-blank lines at a tab, into the lowercase word and its definition
+    # Split all non-blank lines at a tab, into the word and its definition.
+    # The popdefs list capitalizes words, so lowercase them.
     return {
         line.split("\t")[0].lower(): line.split("\t")[1]
         for line in popdefs.strip().splitlines()
@@ -239,10 +307,11 @@ def build_auto_def(word: str) -> str | None:
     try:
         synsets = wordnet.synsets(word)
     except LookupError:
-        return "LookupError raised. " + "The NLTK wordnet package is missing.", False
+        return "LookupError raised. " +\
+            "The NLTK wordnet package is missing.", False
 
     if not synsets:
-        return f"No definition found for '{word}'", False
+        return f"No definition found for '{word}'.", False
 
     # Group definitions together by word part-of-speech
     pos_groups = {}
@@ -264,20 +333,6 @@ def build_auto_def(word: str) -> str | None:
     ) + ".", True  # Report success
 
 
-def is_game_path_valid(path: str) -> bool:
-    """Check if the wordlist and popdefs files exist at the given path
-
-    Args:
-        path (str): A complete path to a folder, allegedly the game's.
-
-    Returns:
-        valid (bool): If we found the two files."""
-
-    return op.exists(op.join(path, WORDLIST_FILE)) and op.exists(
-        op.join(path, POPDEFS_FILE)
-    )
-
-
 def get_word_usage(word: str) -> float:
     """Get how often a word is used.
 
@@ -293,7 +348,8 @@ def get_word_usage(word: str) -> float:
 
 
 def binary_search(elements, value):
-    """A binary search implementation by Bartosz Zaczyński <https://realpython.com/>
+    """A binary search implementation.
+        By Bartosz Zaczyński on <https://realpython.com/>
 
     Args:
         elements (iter): The sorted iterable to search through

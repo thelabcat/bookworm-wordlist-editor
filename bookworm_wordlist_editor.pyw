@@ -19,7 +19,6 @@ limitations under the License.
 
 S.D.G."""
 
-import os
 from os import path as op
 import shutil
 import sys
@@ -29,46 +28,16 @@ from tkinter import messagebox as mb
 from tkinter import simpledialog as dialog
 from tkinter import filedialog
 import time
-import webbrowser
 import bookworm_utils as bw
+import gui_build
 import info
 
 # File paths and related info
-OP_PATH = op.dirname(__file__)  # The path of the script file's containing folder
+
+# The path of the script file's containing folder
+OP_PATH = op.dirname(__file__)
 
 BACKUP_FILEEXT = ".bak"  # Suffix for backup files
-
-# Tkinter file dialog types filter for plain text files
-TEXT_FILETYPE = [("Plain text", ".txt")]
-
-# Allow system environment variable to override normal default for game path
-ENV_GAME_PATH = os.environ.get("BOOKWORM_GAME_PATH")
-if ENV_GAME_PATH:
-    # The environment variable points to a nonexistent path
-    if not op.exists(ENV_GAME_PATH):
-        print("System tried to set game path default to", ENV_GAME_PATH, "but it does not exist.")
-        GAME_PATH_DEFAULT = bw.GAME_PATH_DEFAULT
-
-    # The environment variable points to a real path that is not a valid game path
-    elif not bw.is_game_path_valid(ENV_GAME_PATH):
-        # The default game path is valid
-        if bw.is_game_path_valid(bw.GAME_PATH_DEFAULT):
-            print("System tried to set game path default to", ENV_GAME_PATH, "but it is not valid while", bw.GAME_PATH_DEFAULT, "is.")
-            GAME_PATH_DEFAULT = bw.GAME_PATH_DEFAULT
-
-        # The default game path isn't any better than the one provided
-        else:
-            print("System set game path default to", ENV_GAME_PATH, "which is not a valid game path, but it's the best we know.")
-            GAME_PATH_DEFAULT = ENV_GAME_PATH
-
-    # The environment variable was set validly
-    else:
-        print("System set game path default to", ENV_GAME_PATH)
-        GAME_PATH_DEFAULT = ENV_GAME_PATH
-
-# The environment variable was not set
-else:
-    GAME_PATH_DEFAULT = bw.GAME_PATH_DEFAULT
 
 # Miscellanious GUI settings
 WINDOW_TITLE = info.PROGRAM_NAME
@@ -78,7 +47,6 @@ UNSAVED_WINDOW_TITLE = (
 RARE_COLS = ("#000", "#c00")  # Index with int(<is rare?>)
 WORDFREQ_DISP_PREFIX = "Usage: "
 NO_WORD = "(no word selected)"
-DEFFIELD_SIZE = (15, 5)
 
 
 class Editor(tk.Tk):
@@ -105,6 +73,13 @@ class Editor(tk.Tk):
 
         self.widgets_to_disable = []  # Widgets to disable when busy
 
+        # Variables used by GUI widgets
+        self.search_str = tk.StringVar(self)
+        self.search_str.trace_add("write", lambda *args: self.update_query())
+        self.query_list = tk.Variable(self, value=["foo", "bar", "bazz"])
+        self.word_disp_str = tk.StringVar(self, NO_WORD)
+        self.usage_disp_str = tk.StringVar(self)
+
         # Handle unsaved changes
         self.__unsaved_changes = False
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
@@ -112,14 +87,14 @@ class Editor(tk.Tk):
         # Make the GUI
         self.title(WINDOW_TITLE)
         self.iconphoto(True, tk.PhotoImage(file=info.ICON_PATH))
-        self.build()
+        gui_build.build(self)
 
         # Lock built size as minimum
         self.update()
         self.minsize(self.winfo_width(), self.winfo_height())
 
         # Load files
-        self.game_path = GAME_PATH_DEFAULT
+        self.game_path = bw.GAME_PATH_DEFAULT
         self.load_files(select=False, do_or_die=True)
 
         # Start the GUI loop
@@ -138,7 +113,9 @@ class Editor(tk.Tk):
         Args:
             new_value (bool): Setting if changes are currently unsaved"""
 
-        assert isinstance(new_value, bool), "Value for unsaved changes must be bool"
+        assert isinstance(new_value, bool), \
+            "Value for unsaved changes must be bool"
+
         self.__unsaved_changes = new_value
 
         # Set the window title based on wether changes are saved or not
@@ -167,214 +144,6 @@ class Editor(tk.Tk):
 
         # Close the window
         self.destroy()
-
-    def build(self):
-        """Construct GUI"""
-
-        # Menubar
-        self.menubar = tk.Menu(self)
-        self["menu"] = self.menubar
-
-        # File menu
-        self.file_menu = tk.Menu(self.menubar, tearoff=1)
-        self.menu_labels["file"] = "🗃️ File"
-
-        # Open
-        self.bind("<Control-o>", lambda _: self.load_files(select=True))
-        self.file_menu.add_command(
-            label="📂 Open", underline=3, command=lambda: self.load_files(select=True)
-        )
-
-        # Reload
-        self.bind("<Control-r>", lambda _: self.load_files(select=False))
-        self.file_menu.add_command(
-            label="🔃 Reload", underline=3, command=lambda: self.load_files(select=False)
-        )
-
-        # Save
-        self.bind("<Control-s>", self.save_files)
-        self.file_menu.add_command(label="💾 Save", underline=3, command=self.save_files)
-
-        self.file_menu.add_separator()
-
-        # Backup existing
-        self.bind("<Control-b>", self.make_backup)
-        self.file_menu.add_command(label="🕞 Backup existing", underline=3, command=self.make_backup)
-
-        self.menubar.add_cascade(label=self.menu_labels["file"], menu=self.file_menu)
-
-        # Edit menu
-        self.edit_menu = tk.Menu(self.menubar, tearoff=1)
-        self.menu_labels["edit"] = "🖊️ Edit"
-
-        self.edit_menu.add_command(
-            label="➕ Add several words", command=self.mass_add_words
-        )
-        self.edit_menu.add_command(
-            label="📚 Auto-define undefined rare words", command=self.mass_auto_define
-        )
-
-        self.edit_menu.add_separator()
-        self.edit_menu.add_command(
-            label="🗑️ Delete several words", command=self.mass_delete_words
-        )
-        self.edit_menu.add_command(
-            label="📏 Delete words of invalid length", command=self.del_invalid_len_words
-        )
-        self.edit_menu.add_command(
-            label="⛓️‍💥 Delete orphaned definitions", command=self.del_orphaned_defs
-        )
-        self.edit_menu.add_command(
-            label="👬 Delete duplicate word listings", command=self.del_dupe_words
-        )
-        self.menubar.add_cascade(label=self.menu_labels["edit"], menu=self.edit_menu)
-
-        # Help menu
-        self.help_menu = tk.Menu(self.menubar, tearoff=1)
-        self.menu_labels["help"] = "❔ Help"
-
-        self.help_menu.add_command(
-            label="🪧 About", command=lambda: info.AboutDialogue(self)
-        )
-
-        self.help_menu.add_separator()
-        self.help_menu.add_command(
-            label="📖 How to use",
-            foreground="blue",
-            command=lambda: webbrowser.open(info.URL.how_to_use),
-        )
-        self.help_menu.add_command(
-            label="⁉️ Report an issue",
-            foreground="blue",
-            command=lambda: webbrowser.open(info.URL.report_issue),
-        )
-        self.menubar.add_cascade(label=self.menu_labels["help"], menu=self.help_menu)
-
-        # Frame for list
-        self.list_frame = tk.Frame(self)
-        self.list_frame.grid(row=0, column=0, sticky=tk.NSEW)
-        self.rowconfigure(0, weight=1)
-        self.columnconfigure(0, weight=1)
-
-        # Subframe for search system
-        self.search_frame = tk.Frame(self.list_frame)
-        self.search_frame.grid(row=0, columnspan=2, sticky=tk.NSEW)
-
-        # Search system
-        self.search_label = tk.Label(self.search_frame, text="Search 🔎:", anchor=tk.W)
-        self.search_label.grid(row=0, column=0, sticky=tk.NSEW)
-
-        self.search = tk.StringVar()
-        self.search.trace_add("write", lambda *args: self.update_query())
-        self.search_entry = tk.Entry(self.search_frame, textvariable=self.search)
-        self.search_entry.grid(row=0, column=1, sticky=tk.NSEW)
-        self.search_frame.columnconfigure(1, weight=1)
-
-        self.search_clear_bttn = tk.Button(
-            self.search_frame, text="🧹", command=lambda: self.search.set("")
-        )
-        self.search_clear_bttn.grid(row=0, column=2, sticky=tk.NSEW)
-        self.widgets_to_disable += [
-            self.search_label,
-            self.search_entry,
-            self.search_clear_bttn,
-        ]
-
-        # Word list display
-        self.query_list = tk.Variable(value=["foo", "bar", "bazz"])
-        self.query_box = tk.Listbox(
-            self.list_frame,
-            listvariable=self.query_list,
-            height=10,
-            selectmode=tk.SINGLE,
-            exportselection=False,
-        )
-        self.query_box.bind("<<ListboxSelect>>", self.selection_updated)
-        self.query_box.grid(row=1, column=0, sticky=tk.NSEW)
-        self.widgets_to_disable.append(self.query_box)
-
-        self.query_box_scrollbar = tk.Scrollbar(
-            self.list_frame, orient=tk.VERTICAL, command=self.query_box.yview
-        )
-        self.query_box["yscrollcommand"] = self.query_box_scrollbar.set
-        self.query_box_scrollbar.grid(row=1, column=1, sticky=tk.N + tk.S + tk.E)
-        # self.widgets_to_disable.append(self.query_box_scrollbar)  # Scrollbar cannot be state disabled
-        self.list_frame.rowconfigure(1, weight=1)
-
-        # Button to add a word
-        self.add_word_bttn = tk.Button(
-            self.list_frame, text="➕ Add word", command=self.add_word
-        )
-        self.add_word_bttn.grid(row=2, columnspan=2, sticky=tk.NSEW)
-        self.widgets_to_disable.append(self.add_word_bttn)
-        self.list_frame.columnconfigure(0, weight=1)
-
-        # Right-hand pane, for single word edit functions
-        self.worddef_frame = tk.Frame(self)
-        self.worddef_frame.grid(row=0, column=1, sticky=tk.NSEW)
-        self.worddef_frame.bind_all("<Key>", self.regulate_def_buttons)
-        self.columnconfigure(1, weight=1)
-
-        # Subframe for word and usage display
-        self.worddisp_frame = tk.Frame(self.worddef_frame)
-        self.worddisp_frame.grid(row=0, columnspan=2, sticky=tk.NSEW)
-        self.worddef_frame.columnconfigure(0, weight=1)
-        self.worddef_frame.columnconfigure(1, weight=1)
-
-        # Display the currently selected word
-        self.word_display = tk.Label(self.worddisp_frame, text=NO_WORD)
-        self.word_display.grid(row=0, column=0, sticky=tk.NSEW)
-        self.widgets_to_disable.append(self.word_display)
-        self.worddisp_frame.columnconfigure(0, weight=1)
-
-        # Display how often that word is used
-        self.usage_display = tk.Label(self.worddisp_frame, text="", anchor=tk.E)
-        self.usage_display.grid(row=0, column=1, sticky=tk.NSEW)
-        self.widgets_to_disable.append(self.usage_display)
-
-        # Allow editing of the popdef for the word
-        self.def_field = tk.Text(
-            self.worddef_frame,
-            width=DEFFIELD_SIZE[0],
-            height=DEFFIELD_SIZE[1],
-            wrap=tk.WORD,
-        )
-        self.def_field.grid(row=1, columnspan=2, sticky=tk.NSEW)
-        self.widgets_to_disable.append(self.def_field)
-        self.worddef_frame.rowconfigure(1, weight=1)
-        self.worddef_frame.columnconfigure(0, weight=1)
-        self.worddef_frame.columnconfigure(1, weight=1)
-
-        self.reset_def_bttn = tk.Button(
-            self.worddef_frame, text="🔃 Reset definition", command=self.selection_updated
-        )
-        self.reset_def_bttn.grid(row=2, column=0, sticky=tk.NSEW)
-        self.widgets_to_disable.append(self.reset_def_bttn)
-
-        self.save_def_bttn = tk.Button(
-            self.worddef_frame, text="💾 Save definition", command=self.update_definition
-        )
-        self.save_def_bttn.grid(row=2, column=1, sticky=tk.NSEW)
-        self.widgets_to_disable.append(self.save_def_bttn)
-
-        self.autodef_bttn = tk.Button(
-            self.worddef_frame, text="📚 Auto-define", command=self.auto_define
-        )
-        self.autodef_bttn.grid(row=3, columnspan=2, sticky=tk.NSEW)
-        self.widgets_to_disable.append(self.autodef_bttn)
-
-        self.del_bttn = tk.Button(
-            self.worddef_frame, text="🗑️ Delete word", command=self.delete_selected_word
-        )
-        self.del_bttn.grid(row=4, columnspan=2, sticky=tk.NSEW)
-        self.widgets_to_disable.append(self.del_bttn)
-
-        # Status display footer
-        self.status_displaytext = tk.StringVar(self)
-        self.status_label = tk.Label(
-            self, textvariable=self.status_displaytext, anchor=tk.W, relief="sunken"
-        )
-        self.status_label.grid(row=1, column=0, columnspan=2, sticky=tk.EW)
 
     def thread_process(self, method: callable, message: str = "Working..."):
         """Run a method in a thread, and grey out the GUI until it's finished.
@@ -406,7 +175,9 @@ class Editor(tk.Tk):
     @property
     def idle_status(self) -> str:
         """The status text to display when no operations are running"""
-        return f"Ready. {len(self.words):,} words. {len(self.defs):,} popdefs.{" (unsaved)" if self.unsaved_changes else ""}"
+        return f"Ready. {len(self.words):,} words. " +\
+            f"{len(self.defs):,} popdefs." +\
+            f"{" (unsaved)" if self.unsaved_changes else ""}"
 
     @property
     def busy(self) -> bool:
@@ -468,18 +239,16 @@ class Editor(tk.Tk):
             return
 
         # buttons should be disabled if no word is selected
-        new_state = (tk.NORMAL, tk.DISABLED)[int(self.selected_word == NO_WORD)]
+        new_state = (
+            tk.NORMAL, tk.DISABLED
+            )[int(self.selected_word == NO_WORD)]
 
         for button in (self.autodef_bttn, self.del_bttn):
             button.config(state=new_state)
 
-    def regulate_def_buttons(self, event=None):
+    def regulate_def_buttons(self):
         """Check if the definition has changed, and regulate the reset / save
-            def buttons accordingly.
-
-        Args:
-            event (object): Unused, receives Tkinter callback event data.
-                Defaults to None."""
+            def buttons accordingly."""
 
         # Do not enable or disable these widgets if the GUI is busy
         if self.busy:
@@ -614,12 +383,10 @@ class Editor(tk.Tk):
         # The files were just (re)loaded, so there are no unsaved changes
         self.unsaved_changes = False
 
-    def save_files(self, event=None, backup: bool = False):
+    def save_files(self, backup: bool = False):
         """Save the worldist and popdefs (threaded).
 
         Args:
-            event (object): Unused, receives Tkinter callback event data.
-                Defaults to None.
             backup (bool): Wether or not to copy the original files to a backup name.
                 Defaults to False."""
 
@@ -696,40 +463,35 @@ class Editor(tk.Tk):
         )
 
         # Notify the user that the backup was successful
-        mb.showinfo("Backup completed", f"Copied files to current game path with suffix '{backup_suffix}'")
+        mb.showinfo(
+            "Backup completed",
+            f"Copied files to current game path with suffix '{backup_suffix}'",
+            )
         return True
 
-    def selection_updated(self, event=None):
+    def selection_updated(self):
         """A new word has been selected (or the equivalent of such), update
-            everything.
-
-        Args:
-            event (object): Unused, receives Tkinter callback event data.
-                Defaults to None."""
+            everything."""
 
         # Load and display the current definition
         self.load_definition()
 
         # If no word is selected, clear the usage display
-        # and just show NO_WORD in the main display
+        # and just show NO_WORD in the word display
         if self.selected_word == NO_WORD:
-            self.usage_display.config(text="")
-            word_disp = self.selected_word
+            self.usage_disp_str.set("")
+            self.word_disp_str.set(self.selected_word)
 
         # Otherwise, load and display usage statistics
         # and add quotes around the main display
         else:
             usage = bw.get_word_usage(self.selected_word)
-            self.usage_display.config(
-                text=WORDFREQ_DISP_PREFIX + str(usage),
+            self.usage_disp_str.set(WORDFREQ_DISP_PREFIX + str(usage))
 
-                # Make the usage display colored based on a rarity threshold
-                fg=RARE_COLS[int(usage < bw.RARE_THRESH)],
-            )
-            word_disp = f'"{self.selected_word}"'
+            # Make the usage display colored based on a rarity threshold
+            self.usage_disp_label["fg"] = RARE_COLS[int(usage < bw.RARE_THRESH)]
 
-        # Set the main display to the result regardless
-        self.word_display.config(text=word_disp)
+            self.word_disp_str.set(f'"{self.selected_word}"')
 
         # Enable or disable the word handling buttons based on the selection
         self.regulate_word_buttons()
@@ -738,11 +500,11 @@ class Editor(tk.Tk):
         """Update the list of search results"""
 
         # Do not allow any capitalization or non-letters in the search field
-        self.search.set(
-            "".join([char for char in self.search.get().lower() if char.isalpha()])
+        self.search_str.set(
+            "".join([char for char in self.search_str.get().lower() if char.isalpha()])
         )
 
-        search = self.search.get()
+        search = self.search_str.get()
 
         # Comprehensively filter the wordlist to only matching words
         if search:
@@ -793,8 +555,8 @@ class Editor(tk.Tk):
             word = ""
 
         # Current search does not contain word
-        if self.search.get() not in word:
-            self.search.set("")  # WARNING: Causes one layer of recursion.
+        if self.search_str.get() not in word:
+            self.search_str.set("")  # WARNING: Causes one layer of recursion.
 
         # The word is in our current query, so select and view it
         if word and bw.binary_search(self.words, word) is not None:
@@ -856,7 +618,8 @@ class Editor(tk.Tk):
 
         Args:
             word (str): The word to check.
-            notify (bool): Wether or not to graphically notify the user of invalid length.
+            notify (bool): Wether or not to graphically notify the user
+                if the word was of invalid length.
                 Defaults to False.
 
         Returns:
@@ -871,7 +634,8 @@ class Editor(tk.Tk):
                 "Word is too " +
                 ("short", "long")[int(len(word) > bw.WORD_LENGTH_MAX)],
 
-                f"Word must be between {bw.WORD_LENGTH_MIN:,} and {bw.WORD_LENGTH_MAX:,} letters long.",
+                f"Word must be between {bw.WORD_LENGTH_MIN:,} " +
+                f"and {bw.WORD_LENGTH_MAX:,} letters long.",
             )
 
         return valid
@@ -928,7 +692,7 @@ class Editor(tk.Tk):
         # Have the user select the file
         f = filedialog.askopenfile(
             title="Select human-readable list of words",
-            filetypes=TEXT_FILETYPE,
+            filetypes=bw.TEXT_FILETYPE,
         )
 
         # The user cancelled via the open file dialog
@@ -1125,12 +889,8 @@ class Editor(tk.Tk):
             f"Removed {len(old_words):,} words from the word list.",
         )
 
-    def delete_selected_word(self, event=None):
-        """Delete the currently selected word
-
-        Args:
-            event (object): Unused, receives Tkinter callback event data.
-                Defaults to None."""
+    def delete_selected_word(self):
+        """Delete the currently selected word"""
 
         # No word is selected, so nothing to delete
         if self.selected_word == NO_WORD:
