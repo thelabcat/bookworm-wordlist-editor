@@ -85,7 +85,7 @@ class AboutDialogue(tk.Toplevel):
         self.license_frame = tk.Frame(self)
         self.license_frame.grid(row=2, sticky=tk.EW, padx=10, pady=5)
 
-        tk.Label(self.license_frame, text="Licensed under ", anchor=tk.E).grid(
+        tk.Label(self.license_frame, text="Licensed under", anchor=tk.E).grid(
             row=0, column=0, sticky=tk.NSEW
         )
 
