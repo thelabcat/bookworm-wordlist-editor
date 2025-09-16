@@ -85,8 +85,8 @@ class AboutDialogue(tk.Toplevel):
         self.license_frame = tk.Frame(self)
         self.license_frame.grid(row=2, sticky=tk.EW, padx=10, pady=5)
 
-        tk.Label(self.license_frame, text="Licensed under ").grid(
-            row=0, column=0, sticky=tk.E
+        tk.Label(self.license_frame, text="Licensed under ", anchor=tk.E).grid(
+            row=0, column=0, sticky=tk.NSEW
         )
 
         self.license_link = tk.Label(
@@ -94,8 +94,9 @@ class AboutDialogue(tk.Toplevel):
             text=LICENSE_NAME,
             cursor="hand2",
             foreground="blue",
+            anchor=tk.W
         )
-        self.license_link.grid(row=0, column=1, sticky=tk.W)
+        self.license_link.grid(row=0, column=1, sticky=tk.NSEW)
         self.license_link.bind("<Button-1>", lambda e: webbrowser.open(URL.license))
         self.license_frame.columnconfigure(0, weight=1)
         self.license_frame.columnconfigure(1, weight=1)
