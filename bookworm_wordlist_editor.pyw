@@ -130,7 +130,7 @@ class Editor(tk.Tk):
         )
 
         # Save
-        self.bind("<Control-s>", lambda _: self.save_files)
+        self.bind("<Control-s>", lambda _: self.save_files())
         self.file_menu.add_command(
             label="💾 Save",
             underline=3,
