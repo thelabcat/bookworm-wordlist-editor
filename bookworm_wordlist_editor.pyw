@@ -29,6 +29,7 @@ from tkinter import ttk
 import time
 import webbrowser
 import bookworm_utils as bw
+import config_io
 import gui_heavy_ops
 import info
 
@@ -57,6 +58,9 @@ class Editor(tk.Tk):
         """Main editor window"""
 
         super().__init__()
+
+        # Load our config
+        self.__config = config_io.load_config()
 
         # The word list and definitions dictionary
         self.words = []
@@ -96,11 +100,23 @@ class Editor(tk.Tk):
         self.minsize(self.winfo_width(), self.winfo_height())
 
         # Load files
-        self.game_path = bw.GAME_PATH_DEFAULT
         self.load_files(select=False, do_or_die=True)
 
         # Start the GUI loop
         self.mainloop()
+
+        # Save our config upon exit
+        config_io.save_config(self.__config)
+
+    @property
+    def game_path(self):
+        """The path to the game program folder"""
+        return self.__config["gamePath"]
+
+    @game_path.setter
+    def game_path(self, new: str):
+        """The path to the game program folder"""
+        self.__config["gamePath"] = new
 
     def __build_menubar(self):
         """Construct the GUI's menubar"""
@@ -206,7 +222,6 @@ class Editor(tk.Tk):
         self.menubar.add_cascade(
             label=self.menu_labels["help"], menu=self.help_menu
             )
-
 
     def __build_list_pane(self):
         """Construct the word list pane"""

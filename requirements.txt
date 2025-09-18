@@ -1,2 +1,3 @@
 nltk
+pyyaml
 wordfreq

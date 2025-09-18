@@ -8,6 +8,7 @@ This program edits the wordlist and popup definitions for the game [BookWorm Del
 This program relies on Python >= 3.10 (formally written in Python 3.13), plus the following non-native Python libraries, which can be installed using Pip:
 - [NLTK](https://pypi.org/project/nltk/)
 - [wordfreq](https://pypi.org/project/wordfreq/)
+- [PyYAML](https://pypi.org/project/pyyaml/)
 
 You can find executables with bundled Python and the dependencies in the Releases page of this repository.
 
@@ -17,7 +18,7 @@ To run from source, install Python 3.10 or newer, and then the dependencies, the
 For the auto-define button to work, the program requires an internet connection to download the NLTK wordnet package when it starts up for the first time. If it doesn't have one, it will still function mostly-normally, but the button will just show an error message. It will try to download wordnet again on the next startup.
 
 ### Program operation:
-When the program opens, it will default to opening the BookWorm Deluxe folder in the expected system location per your platform. If on Linux or MacOS, it will assume the default Wine prefix in your user directory. If it does not find the wordlist.txt and popdefs.txt files in this default location, or the default location doesn't exist, it will ask you to choose the BookWorm Deluxe folder manually. If your installation of BookWorm Deluxe is not in the default install location, you can optionally set the `BOOKWORM_GAME_PATH` environment variable to the game program folder, and the program will default to looking there instead. On Linux, this can be done within a Desktop Entry file you can create for the editor. Simply add `env 'BOOKWORM_GAME_PATH=/path/to/Bookworm Deluxe/' ` (with a space separating it from the rest of the command) to the beginning of the command in the `Exec=` line. Alternatively, search online for how to permanently set environment variables in your operating system.
+When the program opens, it will default to opening the BookWorm Deluxe folder in the expected system location per your platform, or the last location that it was successfully opened to, whichever seems better. The memory for that last opened location is stored in `~/.bookworm_wordlist_editor/config.yaml`. You can safely delete this file to reset the configuration to the defaults. If on Linux or MacOS, it will assume the default Wine prefix in your user directory. If it does not find the wordlist.txt and popdefs.txt files in this default location, or the default location doesn't exist, it will ask you to choose the BookWorm Deluxe folder manually.
 
 Once the program loads the files, you should see a list of words in the left pane. The bottom of the window shows the current number of words and popdefs in memory when idle, and status information on any currently running threaded operations.
 - Select a word to see its usage frequency according to wordfreq (zero for no wordfreq entry), and its current popdef (blank for no popdef). If the usage frequency is below an arbitrary value where I think it might need a popdef, it will show in red. Otherwise, it will show in black. While a word is selected you can:

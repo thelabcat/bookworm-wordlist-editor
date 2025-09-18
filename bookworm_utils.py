@@ -34,8 +34,6 @@ S.D.G.
 """
 
 import bisect
-import getpass
-import os
 import os.path as op
 from pathlib import Path
 import platform
@@ -88,20 +86,18 @@ RARE_THRESH = 3.5
 WORD_LENGTH_MIN = 3
 WORD_LENGTH_MAX = 12
 
-# File paths and related info
-SYS_USER = getpass.getuser()
-
 # Default game path inside C drive
-GAME_PATH_C = Path("Program Files", "PopCap Games", "BookWorm Deluxe")
+GAME_PATH_C_DEFAULT = Path("Program Files", "PopCap Games", "BookWorm Deluxe")
 
-# Default game path inside a *NIX all-users directory (to default Wine prefix)
-GAME_PATH_NIX_USERS = Path(SYS_USER, ".wine", "drive_c").joinpath(GAME_PATH_C)
+# Default game path for a *NIX platform
+GAME_PATH_NIX_DEFAULT = Path("~", ".wine", "drive_c")\
+    .expanduser().joinpath(GAME_PATH_C_DEFAULT)
 
 # Default game path based on the OS
 GAME_PATH_OS_DEFAULT = {
-    "Linux": op.join("/home", GAME_PATH_NIX_USERS),
-    "Darwin": op.join("/Users", GAME_PATH_NIX_USERS),
-    "Windows": op.join("C:\\", GAME_PATH_C),
+    "Linux": GAME_PATH_NIX_DEFAULT,
+    "Darwin": GAME_PATH_NIX_DEFAULT,
+    "Windows": op.join("C:\\", GAME_PATH_C_DEFAULT),
 }[platform.system()]
 
 # Tkinter file dialog types filter for plain text files
@@ -110,6 +106,11 @@ TEXT_FILETYPE = [("Plain text", ".txt")]
 # Names of the two game files we can edit
 WORDLIST_FILE = "wordlist.txt"
 POPDEFS_FILE = "popdefs.txt"
+
+
+# Encoding to use when opening the wordlist and popdefs files
+WORDLIST_ENC = "utf-8"
+POPDEFS_ENC = "iso 8859-15"
 
 
 def is_game_path_valid(path: str) -> bool:
@@ -124,48 +125,6 @@ def is_game_path_valid(path: str) -> bool:
     return op.exists(op.join(path, WORDLIST_FILE)) and op.exists(
         op.join(path, POPDEFS_FILE)
     )
-
-
-# Allow system environment variable to override normal default for game path
-ENV_GAME_PATH = os.environ.get("BOOKWORM_GAME_PATH")
-if ENV_GAME_PATH:
-    ENV_GAME_PATH_MSG = f"System set the game path default to {ENV_GAME_PATH}"
-
-    # The environment variable points to a nonexistent path
-    if not op.exists(ENV_GAME_PATH):
-        print(ENV_GAME_PATH_MSG, "but it does not exist.")
-        GAME_PATH_DEFAULT = GAME_PATH_OS_DEFAULT
-
-    # The environment variable points to a real path, but not a valid game path
-    elif not is_game_path_valid(ENV_GAME_PATH):
-        # The default game path is valid
-        if is_game_path_valid(GAME_PATH_OS_DEFAULT):
-            print(
-                ENV_GAME_PATH_MSG,
-                f"but it is not valid while {GAME_PATH_OS_DEFAULT} is.",
-                )
-            GAME_PATH_DEFAULT = GAME_PATH_OS_DEFAULT
-
-        # The default game path isn't any better than the one provided
-        else:
-            print(
-                ENV_GAME_PATH_MSG +
-                "which is not a valid game path, but it's the best we know."
-                )
-            GAME_PATH_DEFAULT = ENV_GAME_PATH
-
-    # The environment variable was set validly
-    else:
-        print(ENV_GAME_PATH_MSG)
-        GAME_PATH_DEFAULT = ENV_GAME_PATH
-
-# The environment variable was not set
-else:
-    GAME_PATH_DEFAULT = GAME_PATH_OS_DEFAULT
-
-# Encoding to use when opening the wordlist and popdefs files
-WORDLIST_ENC = "utf-8"
-POPDEFS_ENC = "iso 8859-15"
 
 
 def unpack_wordlist(wordlist: str) -> list:
