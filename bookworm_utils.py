@@ -38,6 +38,7 @@ import os.path as op
 from pathlib import Path
 import platform
 import re
+import ssl  # For freezing
 import warnings
 import nltk
 from nltk.corpus import wordnet
@@ -53,6 +54,7 @@ WHITESPACE_PATTERN = re.compile(r"\s+")
 # Make sure we have the NLTK wordnet for our English dictionary
 # Note: Without internet, nltk.download will quietly fail and return False.
 # With internet, it will return True even if we already had wordnet.
+print(ssl.get_default_verify_paths())
 nltk.download("wordnet")
 try:
     # Word part-of-speech's that NLTK wordnet may return, and their
