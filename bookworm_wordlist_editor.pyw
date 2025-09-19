@@ -92,6 +92,7 @@ class Editor(tk.Tk):
 
         # Make the GUI
         self.title(WINDOW_TITLE)
+        self.stylemanager = ttk.Style(self)
         self.iconphoto(True, tk.PhotoImage(file=info.ICON_PATH))
         self.build()
 
@@ -304,7 +305,7 @@ class Editor(tk.Tk):
         self.word_disp_frame.columnconfigure(0, weight=1)
 
         # Display how often that word is used
-        ttk.Style().configure(RARE_STYLES[True], foreground="red")
+        self.stylemanager.configure(RARE_STYLES[True], foreground="red")
         self.usage_disp_label = ttk.Label(
             self.word_disp_frame,
             textvariable=self.usage_disp_str,

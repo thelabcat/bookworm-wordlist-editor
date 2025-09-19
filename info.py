@@ -61,7 +61,7 @@ class AboutDialogue(tk.Toplevel):
         super().__init__(parent)
         self.grab_set()
         self.title("About")
-
+        self.stylemanager = ttk.Style(self)
         self.build()
 
         # Lock built size as minimum
@@ -83,7 +83,7 @@ class AboutDialogue(tk.Toplevel):
         ttk.Label(self, image=self.icon).grid(row=2, padx=10, pady=7)
         self.rowconfigure(1, weight=1)
 
-        ttk.Style().configure("Link.TLabel", foreground="blue")
+        self.stylemanager.configure("Link.TLabel", foreground="blue")
 
         # License info
         self.license_frame = ttk.Frame(self)
