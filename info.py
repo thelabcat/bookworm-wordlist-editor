@@ -23,11 +23,12 @@ from os import path as op
 import time
 import webbrowser
 import tkinter as tk
+from tkinter import ttk
 
 OP_PATH = op.dirname(__file__)  # The path of the script file's containing folder
 
 PROGRAM_NAME = "BookWorm Deluxe Wordlist Editor"
-PROGRAM_VER = "2.1.0"
+PROGRAM_VER = "2.2.0"
 ICON_PATH = op.join(OP_PATH, "bookworm_wordlist_editor.png")
 LICENSE_NAME = "Apache License version 2.0"
 
@@ -72,47 +73,56 @@ class AboutDialogue(tk.Toplevel):
     def build(self):
         """Construct the GUI"""
         # Program name and version
-        tk.Label(self, text=PROGRAM_NAME + "\nVersion " + PROGRAM_VER).grid(
-            row=0, padx=10, pady=10
-        )
+        ttk.Label(self, text=PROGRAM_NAME, anchor=tk.CENTER)\
+            .grid(row=0, padx=10, pady=10)
+        ttk.Label(self, text="Version " + PROGRAM_VER, anchor=tk.CENTER)\
+            .grid(row=1, padx=10, pady=7)
 
         # Program icon
         self.icon = tk.PhotoImage(file=ICON_PATH)
-        tk.Label(self, image=self.icon).grid(row=1, padx=10, pady=3)
+        ttk.Label(self, image=self.icon).grid(row=2, padx=10, pady=7)
         self.rowconfigure(1, weight=1)
 
-        # License info
-        self.license_frame = tk.Frame(self)
-        self.license_frame.grid(row=2, sticky=tk.EW, padx=10, pady=5)
+        ttk.Style().configure("Link.TLabel", foreground="blue")
 
-        tk.Label(self.license_frame, text="Licensed under", anchor=tk.E).grid(
+        # License info
+        self.license_frame = ttk.Frame(self)
+        self.license_frame.grid(row=3, sticky=tk.EW, padx=10, pady=5)
+
+        ttk.Label(self.license_frame, text="Licensed under", anchor=tk.E).grid(
             row=0, column=0, sticky=tk.NSEW
         )
 
-        self.license_link = tk.Label(
+        self.license_link = ttk.Label(
             self.license_frame,
             text=LICENSE_NAME,
             cursor="hand2",
-            foreground="blue",
+            style="Link.TLabel",
             anchor=tk.W
         )
         self.license_link.grid(row=0, column=1, sticky=tk.NSEW)
-        self.license_link.bind("<Button-1>", lambda e: webbrowser.open(URL.license))
+        self.license_link.bind(
+            "<Button-1>", lambda e: webbrowser.open(URL.license)
+            )
         self.license_frame.columnconfigure(0, weight=1)
         self.license_frame.columnconfigure(1, weight=1)
 
         # Home page link
-        self.homepage_link = tk.Label(
-            self, text="Project Homepage", cursor="hand2", foreground="blue"
+        self.homepage_link = ttk.Label(
+            self,
+            text="Project Homepage",
+            cursor="hand2",
+            style="Link.TLabel",
+            anchor=tk.CENTER,
         )
-        self.homepage_link.grid(row=3, sticky=tk.EW, padx=10, pady=5)
+        self.homepage_link.grid(row=4, sticky=tk.EW, padx=10, pady=5)
         self.homepage_link.bind("<Button-1>", lambda e: webbrowser.open(URL.homepage))
 
         # Credit to Whom it is always due
-        tk.Label(self, text="S.D.G.").grid(row=4, padx=10, pady=10)
+        ttk.Label(self, text="S.D.G.").grid(row=5, padx=10, pady=10)
 
         # Ok button
-        tk.Button(self, text="Ok", command=self.destroy).grid(row=5, padx=10, pady=10)
+        ttk.Button(self, text="Ok", command=self.destroy).grid(row=6, padx=10, pady=10)
 
         self.columnconfigure(0, weight=1)
 

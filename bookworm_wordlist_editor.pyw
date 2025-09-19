@@ -45,7 +45,7 @@ WINDOW_TITLE = info.PROGRAM_NAME
 UNSAVED_WINDOW_TITLE = (
     "*" + WINDOW_TITLE
 )  # Title of window when there are unsaved changes
-RARE_COLS = ("#000", "#c00")  # Index with int(<is rare?>)
+RARE_STYLES = ("TLabel", "RareColor.TLabel")  # Index with int(<is rare?>)
 WORDFREQ_DISP_PREFIX = "Usage: "
 NO_WORD = "(no word selected)"
 DEFFIELD_SIZE = (15, 5)
@@ -227,15 +227,15 @@ class Editor(tk.Tk):
         """Construct the word list pane"""
 
         # Subframe for search system
-        self.search_frame = tk.Frame(self.list_frame)
+        self.search_frame = ttk.Frame(self.list_frame)
         self.search_frame.grid(row=0, columnspan=2, sticky=tk.NSEW)
 
         # Search system
-        self.search_label = tk.Label(
+        self.search_label = ttk.Label(
             self.search_frame, text="Search 🔎:", anchor=tk.W
             )
         self.search_label.grid(row=0, column=0, sticky=tk.NSEW)
-        self.search_entry = tk.Entry(self.search_frame, textvariable=self.search_str)
+        self.search_entry = ttk.Entry(self.search_frame, textvariable=self.search_str)
         self.search_entry.grid(row=0, column=1, sticky=tk.NSEW)
         self.search_frame.columnconfigure(1, weight=1)
 
@@ -267,7 +267,7 @@ class Editor(tk.Tk):
         self.query_box.grid(row=1, column=0, sticky=tk.NSEW)
         self.widgets_to_disable.append(self.query_box)
 
-        self.query_box_scrollbar = tk.Scrollbar(
+        self.query_box_scrollbar = ttk.Scrollbar(
             self.list_frame, orient=tk.VERTICAL, command=self.query_box.yview
         )
         self.query_box["yscrollcommand"] = self.query_box_scrollbar.set
@@ -277,7 +277,7 @@ class Editor(tk.Tk):
         self.list_frame.rowconfigure(1, weight=1)
 
         # Button to add a word
-        self.add_word_bttn = tk.Button(
+        self.add_word_bttn = ttk.Button(
             self.list_frame, text="➕ Add word", command=self.add_word
         )
         self.add_word_bttn.grid(row=2, columnspan=2, sticky=tk.NSEW)
@@ -288,21 +288,24 @@ class Editor(tk.Tk):
         """Construct the selected word editing pane"""
 
         # Subframe for word and usage display
-        self.word_disp_frame = tk.Frame(self.word_edit_frame)
+        self.word_disp_frame = ttk.Frame(self.word_edit_frame)
         self.word_disp_frame.grid(row=0, columnspan=2, sticky=tk.NSEW)
         self.word_edit_frame.columnconfigure(0, weight=1)
         self.word_edit_frame.columnconfigure(1, weight=1)
 
         # Display the currently selected word
-        self.word_disp_label = tk.Label(
-            self.word_disp_frame, textvariable=self.word_disp_str
+        self.word_disp_label = ttk.Label(
+            self.word_disp_frame,
+            textvariable=self.word_disp_str,
+            anchor=tk.CENTER,
             )
         self.word_disp_label.grid(row=0, column=0, sticky=tk.NSEW)
         self.widgets_to_disable.append(self.word_disp_label)
         self.word_disp_frame.columnconfigure(0, weight=1)
 
         # Display how often that word is used
-        self.usage_disp_label = tk.Label(
+        ttk.Style().configure(RARE_STYLES[True], foreground="red")
+        self.usage_disp_label = ttk.Label(
             self.word_disp_frame,
             textvariable=self.usage_disp_str,
             anchor=tk.E
@@ -323,7 +326,7 @@ class Editor(tk.Tk):
         self.word_edit_frame.columnconfigure(0, weight=1)
         self.word_edit_frame.columnconfigure(1, weight=1)
 
-        self.reset_def_bttn = tk.Button(
+        self.reset_def_bttn = ttk.Button(
             self.word_edit_frame,
             text="🔃 Reset definition",
             command=self.selection_updated,
@@ -331,7 +334,7 @@ class Editor(tk.Tk):
         self.reset_def_bttn.grid(row=2, column=0, sticky=tk.NSEW)
         self.widgets_to_disable.append(self.reset_def_bttn)
 
-        self.save_def_bttn = tk.Button(
+        self.save_def_bttn = ttk.Button(
             self.word_edit_frame,
             text="💾 Save definition",
             command=self.update_definition
@@ -339,7 +342,7 @@ class Editor(tk.Tk):
         self.save_def_bttn.grid(row=2, column=1, sticky=tk.NSEW)
         self.widgets_to_disable.append(self.save_def_bttn)
 
-        self.autodef_bttn = tk.Button(
+        self.autodef_bttn = ttk.Button(
             self.word_edit_frame,
             text="📚 Auto-define",
             command=self.auto_define,
@@ -347,7 +350,7 @@ class Editor(tk.Tk):
         self.autodef_bttn.grid(row=3, columnspan=2, sticky=tk.NSEW)
         self.widgets_to_disable.append(self.autodef_bttn)
 
-        self.del_bttn = tk.Button(
+        self.del_bttn = ttk.Button(
             self.word_edit_frame,
             text="🗑 Delete word",
             command=self.delete_selected_word,
@@ -361,13 +364,13 @@ class Editor(tk.Tk):
         self.__build_menubar()
 
         # Left-hand pane, for list
-        self.list_frame = tk.Frame(self)
+        self.list_frame = ttk.Frame(self)
         self.list_frame.grid(row=0, column=0, sticky=tk.NSEW)
         self.columnconfigure(0, weight=1)
         self.__build_list_pane()
 
         # Right-hand pane, for single word edit functions
-        self.word_edit_frame = tk.Frame(self)
+        self.word_edit_frame = ttk.Frame(self)
         self.word_edit_frame.grid(row=0, column=1, sticky=tk.NSEW)
         self.word_edit_frame.bind_all(
             "<Key>",
@@ -381,7 +384,7 @@ class Editor(tk.Tk):
 
         # Status display footer
         self.status_displaytext = tk.StringVar(self)
-        self.status_label = tk.Label(
+        self.status_label = ttk.Label(
             self,
             textvariable=self.status_displaytext,
             anchor=tk.W,
@@ -663,7 +666,7 @@ class Editor(tk.Tk):
             self.usage_disp_str.set(WORDFREQ_DISP_PREFIX + str(usage))
 
             # Make the usage display colored based on a rarity threshold
-            self.usage_disp_label["fg"] = RARE_COLS[int(usage < bw.RARE_THRESH)]
+            self.usage_disp_label["style"] = RARE_STYLES[usage < bw.RARE_THRESH]
 
             self.word_disp_str.set(f'"{self.selected_word}"')
 
