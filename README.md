@@ -38,8 +38,9 @@ Once the program loads the files, you should see a list of words in the left pan
     - Auto-define undefined rare words: Find all words below my arbitrary usage threshold and attempt to auto-define them.
     - Delete several words: Select a text file of words and delete them all.
     - Delete words of invalid length: Removes words that BookWorm Deluxe will not allow as moves because of their length.
-    - Delete orphaned definitions: Removes definitions from the popdefs that do not have a word in the wordlist.
     - Delete duplicate word listings: Make sure that none of the entries in the word list are redundant.
+    - Delete orphaned definitions: Removes definitions from the popdefs that do not have a word in the wordlist.
+    - Delete unencodable definitions: Removes definitions that cannot be encoded to ISO 8859-15 (what the original files use).
 
 ## Information on antivirus false positives for PyInstaller executables:
 
