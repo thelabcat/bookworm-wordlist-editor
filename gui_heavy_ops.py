@@ -435,6 +435,36 @@ def del_orphaned_defs(self: tk.Tk):
     )
 
 
+def del_badenc_defs(self: tk.Tk):
+    """Find and delete any unencodable definitions
+
+    Args:
+        self (tk.Tk): The main GUI."""
+    self.busy_text = "Finding and deleting unencodable definitions..."
+    found = 0
+    for word, definition in self.defs.copy().items():
+        try:
+            definition.encode(bw.POPDEFS_ENC)
+        except UnicodeEncodeError:
+            del self.defs[word]
+            found += 1
+
+    # No unencodable definitions found
+    if not found:
+        mb.showinfo(
+            "No unencodable definitions",
+            f"All definitions can encode properly to {bw.POPDEFS_ENC}.",
+        )
+        return
+
+    # There are now mass unsaved changes
+    self.mass_unsaved_changes(
+        "Unencodable definitions deleted",
+        f"Found and deleted {found} non {bw.POPDEFS_ENC} encodable " +
+        "definitions.",
+    )
+
+
 def del_dupe_words(self: tk.Tk):
     """Delete any duplicate word listings
 
