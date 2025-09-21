@@ -795,12 +795,12 @@ class Editor(tk.Tk):
         if def_entry:
             # Ensure the new definition will encode properly
             try:
-                def_entry.encode(bw.POPDEFS_ENC)
+                def_entry.encode(bw.FILE_ENC)
             except UnicodeEncodeError:
                 mb.showerror(
                     "Unsaveable definition",
                     "The definition contains one or more characters that " +
-                    f"cannot be encoded to {bw.POPDEFS_ENC}."
+                    f"cannot be encoded to {bw.FILE_ENC}."
                     )
                 return
 

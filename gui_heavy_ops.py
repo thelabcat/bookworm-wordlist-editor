@@ -150,14 +150,14 @@ def load_files(self: tk.Tk, select: bool = True, do_or_die: bool = False):
     # First, load the wordlist
     self.busy_text = f"Loading {bw.WORDLIST_FILE}..."
     with open(
-        self.wordlist_abs_path, encoding=bw.WORDLIST_ENC
+        self.wordlist_abs_path, encoding=bw.FILE_ENC
     ) as f:
         self.words = sorted(bw.unpack_wordlist(f.read().strip()))
 
     # Then, load the popdefs
     self.busy_text = f"Loading {bw.POPDEFS_FILE}..."
     with open(
-        self.popdefs_abs_path, encoding=bw.POPDEFS_ENC
+        self.popdefs_abs_path, encoding=bw.FILE_ENC
     ) as f:
         self.defs = dict(
             sorted(
@@ -212,13 +212,13 @@ def save_files(self: tk.Tk, backup: bool = False):
     # Technically, this should never fail because a word should always be alpha
     try:
         encoded_wordlist = bw.pack_wordlist(sorted(self.words))\
-            .encode(bw.WORDLIST_ENC)
+            .encode(bw.FILE_ENC)
     except UnicodeEncodeError:
         # Failure to encode stops us from even trying to open the file
         mb.showerror(
             "File encoding error",
             "One or more word entries contain characters that couldn't" +
-            f"be encoded in {bw.WORDLIST_ENC}."
+            f"be encoded in {bw.FILE_ENC}."
             )
         return
 
@@ -228,13 +228,13 @@ def save_files(self: tk.Tk, backup: bool = False):
     # Ensure that the popdefs encodes properly
     try:
         encoded_popdefs = bw.pack_popdefs(dict(sorted(self.defs.items())))\
-            .encode(bw.POPDEFS_ENC)
+            .encode(bw.FILE_ENC)
     except UnicodeEncodeError:
         # Failure to encode stops us from even trying to open the file
         mb.showerror(
             "File encoding error",
             "One or more definition entries contain characters that couldn't" +
-            f"be encoded in {bw.POPDEFS_ENC}."
+            f"be encoded in {bw.FILE_ENC}."
             )
         return
 
@@ -444,7 +444,7 @@ def del_badenc_defs(self: tk.Tk):
     found = 0
     for word, definition in self.defs.copy().items():
         try:
-            definition.encode(bw.POPDEFS_ENC)
+            definition.encode(bw.FILE_ENC)
         except UnicodeEncodeError:
             del self.defs[word]
             found += 1
@@ -453,14 +453,14 @@ def del_badenc_defs(self: tk.Tk):
     if not found:
         mb.showinfo(
             "No unencodable definitions",
-            f"All definitions can encode properly to {bw.POPDEFS_ENC}.",
+            f"All definitions can encode properly to {bw.FILE_ENC}.",
         )
         return
 
     # There are now mass unsaved changes
     self.mass_unsaved_changes(
         "Unencodable definitions deleted",
-        f"Found and deleted {found} non {bw.POPDEFS_ENC} encodable " +
+        f"Found and deleted {found} non {bw.FILE_ENC} encodable " +
         "definitions.",
     )
 

@@ -47,6 +47,7 @@ from wordfreq import zipf_frequency
 ALPHABET = "abcdefghijklmnopqrstuvwxyz"
 NUMERIC = "1234567890"
 DOS_LINE_ENDING = "\r\n"
+FILE_ENC = "iso 8859-15"
 
 # RegEx pattern to match one or more of any whitespace character
 WHITESPACE_PATTERN = re.compile(r"\s+")
@@ -107,11 +108,6 @@ TEXT_FILETYPE = [("Plain text", ".txt")]
 # Names of the two game files we can edit
 WORDLIST_FILE = "wordlist.txt"
 POPDEFS_FILE = "popdefs.txt"
-
-
-# Encoding to use when opening the wordlist and popdefs files
-WORDLIST_ENC = "utf-8"
-POPDEFS_ENC = "iso 8859-15"
 
 
 def is_game_path_valid(path: str) -> bool:
