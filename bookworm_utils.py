@@ -46,6 +46,7 @@ from wordfreq import zipf_frequency
 # Language and charset information
 ALPHABET = "abcdefghijklmnopqrstuvwxyz"
 NUMERIC = "1234567890"
+DOS_LINE_ENDING = "\r\n"
 
 # RegEx pattern to match one or more of any whitespace character
 WHITESPACE_PATTERN = re.compile(r"\s+")
@@ -195,13 +196,23 @@ def pack_wordlist(words: list[str]) -> str:
 
         # Compare the new word with the old one, one letter at a time,
         # only going to the end of the shortest of the two words
-        copy = 0  # Ensure the variable exists.
+        copy = 0  # Ensure the copy variable exists.
+        all_in_common = True  # Does the longer word begin with the shorter?
         for copy, letters in enumerate(zip(old_word, new_word)):
             # Compare the two letters at the same position from each word
             if letters[0] != letters[1]:
                 # copy is now set to the index of the first letter that the
-                # new word does not have in common with the old one
+                # new word does not have in common with the old one.
+
+                # The longer word doesn't begin with the shorter.
+                all_in_common = False
                 break
+
+        # If we got through the shortest word without breaking, then the longer
+        # word began with the shorter one. The index of the first uncommon
+        # letter would be past the end of the short word by one, so we can just
+        # add that one here.
+        copy += all_in_common
 
         # Only include the copy count in the listing if it has changed,
         # and only include the differing letters of the new word.
@@ -209,7 +220,8 @@ def pack_wordlist(words: list[str]) -> str:
         oldcopy = copy
         old_word = new_word
 
-    return "\n".join(listings).strip()
+    # The original files ended with a blank line
+    return DOS_LINE_ENDING.join(listings) + DOS_LINE_ENDING
 
 
 def unpack_popdefs(popdefs: str) -> dict[str, str]:
@@ -239,12 +251,12 @@ def pack_popdefs(defs: dict[str, str]) -> str:
     Returns:
         popdefs (str): The contents of a new popdefs.txt"""
 
-    return "\n".join(
+    return DOS_LINE_ENDING.join(
         [
             word.upper() + "\t" + definition
             for word, definition in defs.items()
         ]
-    )
+    ) + DOS_LINE_ENDING  # The original files ended with a blank line
 
 
 def build_auto_def(word: str) -> str | None:
