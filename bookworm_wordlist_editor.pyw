@@ -33,8 +33,6 @@ import config_io
 import gui_heavy_ops
 import info
 
-# File paths and related info
-
 # The path of the script file's containing folder
 OP_PATH = op.dirname(__file__)
 
@@ -42,9 +40,7 @@ BACKUP_FILEEXT = ".bak"  # Suffix for backup files
 
 # Miscellanious GUI settings
 WINDOW_TITLE = info.PROGRAM_NAME
-UNSAVED_WINDOW_TITLE = (
-    "*" + WINDOW_TITLE
-)  # Title of window when there are unsaved changes
+UNSAVED_WINDOW_TITLE = "*" + WINDOW_TITLE
 RARE_STYLES = ("TLabel", "RareColor.TLabel")  # Index with int(<is rare?>)
 WORDFREQ_DISP_PREFIX = "Usage: "
 NO_WORD = "(no word selected)"
@@ -136,7 +132,7 @@ class Editor(tk.Tk):
             label="📂 Open",
             underline=3,
             command=lambda: self.load_files(select=True),
-        )
+            )
 
         # Reload
         self.bind("<Control-r>", lambda _: self.load_files(select=False))
@@ -144,7 +140,7 @@ class Editor(tk.Tk):
             label="🔃 Reload",
             underline=3,
             command=lambda: self.load_files(select=False),
-        )
+            )
 
         # Save
         self.bind("<Control-s>", lambda _: self.save_files())
@@ -175,28 +171,35 @@ class Editor(tk.Tk):
 
         self.edit_menu.add_command(
             label="➕ Add several words", command=self.mass_add_words
-        )
+            )
         self.edit_menu.add_command(
             label="📚 Auto-define undefined rare words",
             command=self.mass_auto_define
-        )
+            )
 
         self.edit_menu.add_separator()
         self.edit_menu.add_command(
             label="🗑 Delete several words", command=self.mass_delete_words
-        )
+            )
         self.edit_menu.add_command(
             label="📏 Delete words of invalid length",
             command=self.del_invalid_len_words
-        )
-        self.edit_menu.add_command(
-            label="⛓️‍💥 Delete orphaned definitions",
-            command=self.del_orphaned_defs
-        )
+            )
         self.edit_menu.add_command(
             label="👬 Delete duplicate word listings",
             command=self.del_dupe_words
-        )
+            )
+
+        self.edit_menu.add_separator()
+        self.edit_menu.add_command(
+            label="⛓️‍💥 Delete orphaned definitions",
+            command=self.del_orphaned_defs
+            )
+        self.edit_menu.add_command(
+            label="🔣 Delete unencodable definitions",
+            command=self.del_badenc_defs
+            )
+
         self.menubar.add_cascade(
             label=self.menu_labels["edit"], menu=self.edit_menu
             )
@@ -220,6 +223,7 @@ class Editor(tk.Tk):
             foreground="blue",
             command=lambda: webbrowser.open(info.URL.report_issue),
         )
+
         self.menubar.add_cascade(
             label=self.menu_labels["help"], menu=self.help_menu
             )
@@ -465,7 +469,14 @@ class Editor(tk.Tk):
 
         self.busy_text = message
         self.busy = True
-        method()
+        try:
+            method()
+        except Exception as e:
+            mb.showerror(
+                "Unhandled exception",
+                "While running the operation, the program ran into an error:" +
+                f"\n{type(e).__name__}: {e}"
+                )
         self.busy = False
 
         # The currently selected word may have had changes made
@@ -955,6 +966,11 @@ class Editor(tk.Tk):
         """Find and delete any orphaned definitions (threaded)"""
 
         self.thread_process(lambda: gui_heavy_ops.del_orphaned_defs(self))
+
+    def del_badenc_defs(self):
+        """Find and delete any unencodable definitions"""
+
+        self.thread_process(lambda: gui_heavy_ops.del_badenc_defs(self))
 
     def del_dupe_words(self):
         """Delete any duplicate word listings (threaded)"""
