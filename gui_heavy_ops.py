@@ -174,7 +174,8 @@ def load_files(self: tk.Tk, select: bool = True, do_or_die: bool = False):
 
 
 def save_files(self: tk.Tk, backup: bool = False):
-    """Save the worldist and popdefs.
+    """Attempt to save the worldist and popdefs.
+        Reference self.unsaved_changes to know the result.
 
     Args:
         self (tk.Tk): The main GUI.
@@ -204,19 +205,44 @@ def save_files(self: tk.Tk, backup: bool = False):
         self.busy_text = "Creating backup..."
         self.make_backup()
 
-    # First, save the wordlist
-    self.busy_text = f"Saving {bw.WORDLIST_FILE}..."
-    with open(
-        self.wordlist_abs_path, "w", encoding=bw.WORDLIST_ENC
-    ) as f:
-        f.write(bw.pack_wordlist(sorted(self.words)))
+    # First, encode the wordlist
+    self.busy_text = f"Encoding {bw.WORDLIST_FILE}..."
 
-    # Then, save the popdefs
-    self.busy_text = f"Saving {bw.POPDEFS_FILE}..."
-    with open(
-        self.popdefs_abs_path, "w", encoding=bw.POPDEFS_ENC
-    ) as f:
-        f.write(bw.pack_popdefs(dict(sorted(self.defs.items()))))
+    # Ensure that the wordlist encodes properly
+    # Technically, this should never fail because a word should always be alpha
+    try:
+        encoded_wordlist = bw.pack_wordlist(sorted(self.words))\
+            .encode(bw.WORDLIST_ENC)
+    except UnicodeEncodeError:
+        # Failure to encode stops us from even trying to open the file
+        mb.showerror(
+            "File encoding error",
+            "One or more word entries contain characters that couldn't" +
+            f"be encoded in {bw.WORDLIST_ENC}."
+            )
+        return
+
+    # Then, encode the popdefs
+    self.busy_text = f"Encoding {bw.POPDEFS_FILE}..."
+
+    # Ensure that the popdefs encodes properly
+    try:
+        encoded_popdefs = bw.pack_popdefs(dict(sorted(self.defs.items())))\
+            .encode(bw.POPDEFS_ENC)
+    except UnicodeEncodeError:
+        # Failure to encode stops us from even trying to open the file
+        mb.showerror(
+            "File encoding error",
+            "One or more definition entries contain characters that couldn't" +
+            f"be encoded in {bw.POPDEFS_ENC}."
+            )
+        return
+
+    self.busy_text = "Writing to disk..."
+    with open(self.wordlist_abs_path, "wb") as f:
+        f.write(encoded_wordlist)
+    with open(self.popdefs_abs_path, "wb") as f:
+        f.write(encoded_popdefs)
 
     self.unsaved_changes = False  # All changes are now saved
 

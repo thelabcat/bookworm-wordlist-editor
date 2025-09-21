@@ -434,6 +434,12 @@ class Editor(tk.Tk):
             # The user clicked yes
             if answer:
                 self.save_files()
+                if self.unsaved_changes:
+                    mb.showerror(
+                        "Could not save",
+                        "Failed to save the files. Not exiting."
+                        )
+                    return
 
         # Close the window
         self.destroy()
@@ -606,7 +612,8 @@ class Editor(tk.Tk):
         )
 
     def save_files(self, backup: bool = False):
-        """Save the worldist and popdefs (threaded).
+        """Attempt to save the worldist and popdefs (threaded).
+            Reference self.unsaved_changes to know the result.
 
         Args:
             backup (bool): Wether or not to copy the original files to a
@@ -775,6 +782,18 @@ class Editor(tk.Tk):
 
         # We have a definition to save
         if def_entry:
+            # Ensure the new definition will encode properly
+            try:
+                def_entry.encode(bw.POPDEFS_ENC)
+            except UnicodeEncodeError:
+                mb.showerror(
+                    "Unsaveable definition",
+                    "The definition contains one or more characters that " +
+                    f"cannot be encoded to {bw.POPDEFS_ENC}."
+                    )
+                return
+
+            # Encoding is all clear, save the definition to memory
             self.defs[self.selected_word] = def_entry
 
         # We had a definition, and it has been deleted
