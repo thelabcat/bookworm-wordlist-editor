@@ -44,8 +44,6 @@ from nltk.corpus import wordnet
 from wordfreq import zipf_frequency
 
 # Language and charset information
-ALPHABET = "abcdefghijklmnopqrstuvwxyz"
-NUMERIC = "1234567890"
 DOS_LINE_ENDING = "\r\n"
 FILE_ENC = "iso 8859-15"
 
@@ -143,7 +141,7 @@ def unpack_wordlist(wordlist: str) -> list:
         # Parse any numbers at the beginning of the listing as the copy count
         i = 0  # Ensure the variable exists.
         for i, char in enumerate(listing):
-            if char not in NUMERIC:
+            if not char.isnumeric():
                 break  # i is now the index of the first letter in the listing
 
         # Set copystr to any digits at the beginning of the listing
