@@ -41,8 +41,9 @@ BACKUP_FILEEXT = ".bak"  # Suffix for backup files
 # Miscellanious GUI settings
 WINDOW_TITLE = info.PROGRAM_NAME
 UNSAVED_WINDOW_TITLE = "*" + WINDOW_TITLE
-RARE_STYLES = ("TLabel", "RareColor.TLabel")  # Index with int(<is rare?>)
-WORDFREQ_DISP_PREFIX = "Usage: "
+RARE_COLS = ("#00b8ff", "#ffb800")  # Index with int(<is rare?>)
+RARITY_DISP_PREFIX = "Rarity: "
+RARITY_DISP_MAX = 8
 NO_WORD = "(no word selected)"
 DEFFIELD_SIZE = (15, 5)
 
@@ -80,7 +81,8 @@ class Editor(tk.Tk):
         self.search_str.trace_add("write", lambda *args: self.update_query())
         self.query_list = tk.Variable(self, value=["foo", "bar", "bazz"])
         self.word_disp_str = tk.StringVar(self, NO_WORD)
-        self.usage_disp_str = tk.StringVar(self)
+        self.rarity_disp_double = tk.DoubleVar(self)
+        self.rarity_disp_double.trace_add("write", lambda *args: self.update_rarity_disp_style())
 
         # Handle unsaved changes
         self.__unsaved_changes = False
@@ -88,7 +90,7 @@ class Editor(tk.Tk):
 
         # Make the GUI
         self.title(WINDOW_TITLE)
-        self.stylemanager = ttk.Style(self)
+        self.styler = ttk.Style(self)
         self.iconphoto(True, tk.PhotoImage(file=info.ICON_PATH))
         self.build()
 
@@ -269,6 +271,12 @@ class Editor(tk.Tk):
             "<<ListboxSelect>>",
             lambda _: self.selection_updated(),
             )
+        self.query_box.bind(
+            "<Up>",
+            lambda _: self.move_in_query(-1))
+        self.query_box.bind(
+            "<Down>",
+            lambda _: self.move_in_query(1))
         self.query_box.grid(row=1, column=0, sticky=tk.NSEW)
         self.widgets_to_disable.append(self.query_box)
 
@@ -309,14 +317,34 @@ class Editor(tk.Tk):
         self.word_disp_frame.columnconfigure(0, weight=1)
 
         # Display how often that word is used
-        self.stylemanager.configure(RARE_STYLES[True], foreground="red")
-        self.usage_disp_label = ttk.Label(
+        # IDK exactly how this style works, but it does
+        self.styler.layout(
+            'text.Horizontal.TProgressbar',
+            [
+                (
+                    'Horizontal.Progressbar.trough',
+                    {
+                        'children': [(
+                            'Horizontal.Progressbar.pbar',
+                            {'side': tk.LEFT, 'sticky': tk.NS}
+                            )],
+                        'sticky': tk.NSEW
+                    }
+                ),
+                ('Horizontal.Progressbar.label', {'sticky': ''})
+            ]
+        )
+
+        self.rarity_display = ttk.Progressbar(
             self.word_disp_frame,
-            textvariable=self.usage_disp_str,
-            anchor=tk.E
+            variable=self.rarity_disp_double,
+            style='text.Horizontal.TProgressbar',
+            maximum=RARITY_DISP_MAX,
             )
-        self.usage_disp_label.grid(row=0, column=1, sticky=tk.NSEW)
-        self.widgets_to_disable.append(self.usage_disp_label)
+        self.update_rarity_disp_style()
+        self.rarity_display.grid(row=0, column=1, sticky=tk.NSEW)
+        # Progress bar cannot be disabled
+        # self.widgets_to_disable.append(self.rarity_display)
 
         # Allow editing of the popdef for the word
         self.def_field = tk.Text(
@@ -534,6 +562,28 @@ class Editor(tk.Tk):
         if not self.busy:
             self.status_displaytext.set(self.idle_status)
 
+    def update_rarity_disp_style(self):
+        """Set the update meter text to the current value
+
+        Args:
+            force_text (bool): Make sure to display text even if no word is selected.
+                Defaults to False."""
+
+        if self.selected_word == NO_WORD:
+            self.styler.configure(
+                "TProgressbar",
+                text="",
+                background=RARE_COLS[0]
+                )
+            return
+
+        self.styler.configure(
+            "TProgressbar",
+            text=RARITY_DISP_PREFIX +
+            f"{self.rarity_disp_double.get():.02f} / {RARITY_DISP_MAX}",
+            background=RARE_COLS[RARITY_DISP_MAX - self.rarity_disp_double.get() < bw.RARE_THRESH],
+            )
+
     def unique_disable_handlers(self):
         """Run all unique widget disabling handlers"""
 
@@ -675,17 +725,14 @@ class Editor(tk.Tk):
         # If no word is selected, clear the usage display
         # and just show NO_WORD in the word display
         if self.selected_word == NO_WORD:
-            self.usage_disp_str.set("")
+            self.rarity_disp_double.set(0)
             self.word_disp_str.set(self.selected_word)
 
         # Otherwise, load and display usage statistics
         # and add quotes around the main display
         else:
             usage = bw.get_word_usage(self.selected_word)
-            self.usage_disp_str.set(WORDFREQ_DISP_PREFIX + str(usage))
-
-            # Make the usage display colored based on a rarity threshold
-            self.usage_disp_label["style"] = RARE_STYLES[usage < bw.RARE_THRESH]
+            self.rarity_disp_double.set(RARITY_DISP_MAX - usage)
 
             self.word_disp_str.set(f'"{self.selected_word}"')
 
@@ -766,6 +813,25 @@ class Editor(tk.Tk):
         else:
             self.query_box.selection_clear(0, tk.END)
 
+        self.selection_updated()
+
+    def move_in_query(self, amount: int):
+        """Move through the existing query by a delta
+
+        Args:
+            amount (int): The amount to move by. Quietly clamped to query size.
+        """
+        og = self.query_box.curselection()[0]
+        desired = og + amount
+        target = max((0, min((desired, self.query_box.size() - 1))))
+
+        # After clamping, we cannot move at all
+        if target == og:
+            return
+
+        self.query_box.selection_clear(0, tk.END)
+        self.query_box.selection_set(target)
+        self.query_box.see(target)
         self.selection_updated()
 
     def load_definition(self):
