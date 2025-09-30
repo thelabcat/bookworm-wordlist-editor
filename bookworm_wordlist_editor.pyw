@@ -821,14 +821,21 @@ class Editor(tk.Tk):
         Args:
             amount (int): The amount to move by. Quietly clamped to query size.
         """
+
+        # Do not try to move if the query is empty
+        if not self.query_box.size():
+            return
+
+        # Get our current position, augment it, then clamp it to query size
         og = self.query_box.curselection()[0]
         desired = og + amount
         target = max((0, min((desired, self.query_box.size() - 1))))
 
-        # After clamping, we cannot move at all
+        # After clamping, can we move in that direction at all?
         if target == og:
             return
 
+        # Actually make the selection change
         self.query_box.selection_clear(0, tk.END)
         self.query_box.selection_set(target)
         self.query_box.see(target)
