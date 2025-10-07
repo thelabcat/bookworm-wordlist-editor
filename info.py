@@ -24,11 +24,12 @@ import time
 import webbrowser
 import tkinter as tk
 from tkinter import ttk
+import theme
 
 OP_PATH = op.dirname(__file__)  # The path of the script file's containing folder
 
 PROGRAM_NAME = "BookWorm Deluxe Wordlist Editor"
-PROGRAM_VER = "2.4.1"
+PROGRAM_VER = "2.5.0"
 ICON_PATH = op.join(OP_PATH, "bookworm_wordlist_editor.png")
 LICENSE_NAME = "Apache License version 2.0"
 
@@ -62,6 +63,7 @@ class AboutDialogue(tk.Toplevel):
         self.grab_set()
         self.title("About")
         self.stylemanager = ttk.Style(self)
+        self.configure(background=theme.COLORS["leather"])
         self.build()
 
         # Lock built size as minimum
@@ -82,8 +84,6 @@ class AboutDialogue(tk.Toplevel):
         self.icon = tk.PhotoImage(file=ICON_PATH)
         ttk.Label(self, image=self.icon).grid(row=2, padx=10, pady=7)
         self.rowconfigure(1, weight=1)
-
-        self.stylemanager.configure("Link.TLabel", foreground="blue")
 
         # License info
         self.license_frame = ttk.Frame(self)

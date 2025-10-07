@@ -30,6 +30,7 @@ import time
 import webbrowser
 import bookworm_utils as bw
 import config_io
+import theme
 import gui_heavy_ops
 import info
 
@@ -41,7 +42,7 @@ BACKUP_FILEEXT = ".bak"  # Suffix for backup files
 # Miscellanious GUI settings
 WINDOW_TITLE = info.PROGRAM_NAME
 UNSAVED_WINDOW_TITLE = "*" + WINDOW_TITLE
-RARE_COLS = ("#00b8ff", "#ffb800")  # Index with int(<is rare?>)
+RARE_COLS = (theme.COLORS["paper"], theme.COLORS["sapphire"])  # Index with int(<is rare?>)
 RARITY_DISP_PREFIX = "Rarity: "
 RARITY_DISP_MAX = 8
 NO_WORD = "(no word selected)"
@@ -91,6 +92,9 @@ class Editor(tk.Tk):
         # Make the GUI
         self.title(WINDOW_TITLE)
         self.styler = ttk.Style(self)
+        self.styler.theme_create("library", "default", theme.LIBRARY_THEME)
+        self.styler.theme_use("library")
+
         self.iconphoto(True, tk.PhotoImage(file=info.ICON_PATH))
         self.build()
 
@@ -121,11 +125,11 @@ class Editor(tk.Tk):
         """Construct the GUI's menubar"""
 
         # Base menubar
-        self.menubar = tk.Menu(self)
+        self.menubar = tk.Menu(self, **theme.MENU_STYLING_KWARGS)
         self["menu"] = self.menubar
 
         # File menu
-        self.file_menu = tk.Menu(self.menubar, tearoff=1)
+        self.file_menu = tk.Menu(self.menubar, tearoff=1, **theme.MENU_STYLING_KWARGS)
         self.menu_labels["file"] = "🗃 File"
 
         # Open
@@ -168,7 +172,7 @@ class Editor(tk.Tk):
             )
 
         # Edit menu
-        self.edit_menu = tk.Menu(self.menubar, tearoff=1)
+        self.edit_menu = tk.Menu(self.menubar, tearoff=1, **theme.MENU_STYLING_KWARGS)
         self.menu_labels["edit"] = "🖊 Edit"
 
         self.edit_menu.add_command(
@@ -207,7 +211,7 @@ class Editor(tk.Tk):
             )
 
         # Help menu
-        self.help_menu = tk.Menu(self.menubar, tearoff=1)
+        self.help_menu = tk.Menu(self.menubar, tearoff=1, **theme.MENU_STYLING_KWARGS)
         self.menu_labels["help"] = "❔ Help"
 
         self.help_menu.add_command(
@@ -217,12 +221,12 @@ class Editor(tk.Tk):
         self.help_menu.add_separator()
         self.help_menu.add_command(
             label="📖 How to use",
-            foreground="blue",
+            foreground=theme.COLORS["link_blue"],
             command=lambda: webbrowser.open(info.URL.how_to_use),
         )
         self.help_menu.add_command(
             label="⁉️ Report an issue",
-            foreground="blue",
+            foreground=theme.COLORS["link_blue"],
             command=lambda: webbrowser.open(info.URL.report_issue),
         )
 
@@ -266,7 +270,11 @@ class Editor(tk.Tk):
             height=10,
             selectmode=tk.SINGLE,
             exportselection=False,
+            bg=theme.COLORS["paper"],
+            selectbackground=theme.COLORS["selected_paper"],
+            selectforeground="white"
         )
+
         self.query_box.bind(
             "<<ListboxSelect>>",
             lambda _: self.selection_updated(),
@@ -311,6 +319,7 @@ class Editor(tk.Tk):
             self.word_disp_frame,
             textvariable=self.word_disp_str,
             anchor=tk.CENTER,
+            style="WordDisplay.TLabel",
             )
         self.word_disp_label.grid(row=0, column=0, sticky=tk.NSEW)
         self.widgets_to_disable.append(self.word_disp_label)
@@ -352,6 +361,7 @@ class Editor(tk.Tk):
             width=DEFFIELD_SIZE[0],
             height=DEFFIELD_SIZE[1],
             wrap=tk.WORD,
+            # bg=theme.COLORS["selected_paper"],
         )
         self.def_field.grid(row=1, columnspan=2, sticky=tk.NSEW)
         self.widgets_to_disable.append(self.def_field)
@@ -421,7 +431,8 @@ class Editor(tk.Tk):
             self,
             textvariable=self.status_displaytext,
             anchor=tk.W,
-            relief="sunken"
+            relief="sunken",
+            style="Score.TLabel",
         )
         self.status_label.grid(row=1, column=0, columnspan=2, sticky=tk.EW)
 
