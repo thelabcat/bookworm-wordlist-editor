@@ -42,11 +42,16 @@ BACKUP_FILEEXT = ".bak"  # Suffix for backup files
 # Miscellanious GUI settings
 WINDOW_TITLE = info.PROGRAM_NAME
 UNSAVED_WINDOW_TITLE = "*" + WINDOW_TITLE
-RARE_COLS = (theme.COLORS["paper"], theme.COLORS["sapphire"])  # Index with int(<is rare?>)
+
+# Index with int(<is rare?>)
+RARE_COLS = (theme.COLORS["paper"], theme.COLORS["sapphire"])
 RARITY_DISP_PREFIX = "Rarity: "
 RARITY_DISP_MAX = 8
 NO_WORD = "(no word selected)"
 DEFFIELD_SIZE = (15, 5)
+
+# Widgets we type in, to set shortcuts for
+TYPING_WIDGETS = ("Text", "TEntry")
 
 
 class Editor(tk.Tk):
@@ -369,7 +374,6 @@ class Editor(tk.Tk):
             "<KeyRelease>",
             lambda _: self.regulate_def_buttons(),
             )
-        self.def_field.bind("<Control-a>", lambda _: self.select_all_def())
         self.word_edit_frame.rowconfigure(1, weight=1)
         self.word_edit_frame.columnconfigure(0, weight=1)
         self.word_edit_frame.columnconfigure(1, weight=1)
@@ -406,13 +410,33 @@ class Editor(tk.Tk):
         self.del_bttn.grid(row=4, columnspan=2, sticky=tk.NSEW)
         self.widgets_to_disable.append(self.del_bttn)
 
-    def select_all_def(self):
-        """Select all text in the definition field"""
-        self.def_field.tag_add(tk.SEL, "1.0", "end-1c")
-        return "break"
+    def select_all(self, event: tk.Event):
+        """Select all text in the widget generating the given event
+
+        Args:
+            event (tk.Event): The Tkinter event that calls this."""
+
+        # This is a Text widget
+        if hasattr(event.widget, "tag_add"):
+            event.widget.tag_add(tk.SEL, "1.0", "end-1c")
+            return
+
+        # This is an Entry widget
+        if hasattr(event.widget, "selection_range"):
+            event.widget.selection_range(0, tk.END)
+            return
+
+        print(
+            "ERROR: Attempted to select all in unhandled widget type:",
+            type(event.widget),
+            )
 
     def build(self):
         """Construct the GUI"""
+
+        # Make Ctrl + A the select all shortcut
+        for typing_widget in TYPING_WIDGETS:
+            self.bind_class(typing_widget, "<Control-a>", self.select_all)
 
         self.__build_menubar()
 
