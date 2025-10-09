@@ -365,6 +365,11 @@ class Editor(tk.Tk):
         )
         self.def_field.grid(row=1, columnspan=2, sticky=tk.NSEW)
         self.widgets_to_disable.append(self.def_field)
+        self.def_field.bind(
+            "<KeyRelease>",
+            lambda _: self.regulate_def_buttons(),
+            )
+        self.def_field.bind("<Control-a>", lambda _: self.select_all_def())
         self.word_edit_frame.rowconfigure(1, weight=1)
         self.word_edit_frame.columnconfigure(0, weight=1)
         self.word_edit_frame.columnconfigure(1, weight=1)
@@ -401,6 +406,11 @@ class Editor(tk.Tk):
         self.del_bttn.grid(row=4, columnspan=2, sticky=tk.NSEW)
         self.widgets_to_disable.append(self.del_bttn)
 
+    def select_all_def(self):
+        """Select all text in the definition field"""
+        self.def_field.tag_add(tk.SEL, "1.0", "end-1c")
+        return "break"
+
     def build(self):
         """Construct the GUI"""
 
@@ -415,10 +425,6 @@ class Editor(tk.Tk):
         # Right-hand pane, for single word edit functions
         self.word_edit_frame = ttk.Frame(self)
         self.word_edit_frame.grid(row=0, column=1, sticky=tk.NSEW)
-        self.word_edit_frame.bind_all(
-            "<Key>",
-            lambda _: self.regulate_def_buttons(),
-            )
         self.columnconfigure(1, weight=1)
         self.__build_word_edit_pane()
 
